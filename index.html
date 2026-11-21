@@ -295,7 +295,7 @@ button,input,select,textarea{font-size:14px}
     <p id="profileUpdateMessage" class="message"></p>
    </form>
   </div>
-  <div class="card"><h3>KYC Verification</h3><div id="verificationStatus" class="status pending">Verification pending</div><div id="kycSection"><p class="muted">Please submit your identity document.</p><form id="kycForm"><select id="documentType" required><option value="">Select Document</option><option value="Passport">Passport</option><option value="National ID">National ID</option><option value="Driving Licence">Driving Licence</option></select><input id="kycFile" type="file" accept="image/*,.pdf" required><button class="full" id="kycButton">Submit KYC</button></form><p id="kycStatus" class="message"></p></div></div>
+  <div class="card"><h3>KYC Verification</h3><div id="verificationStatus" class="status pending">Checking KYC status...</div><div id="kycSection"><p class="muted">Please submit your identity document.</p><form id="kycForm"><select id="documentType" required><option value="">Select Document</option><option value="Passport">Passport</option><option value="National ID">National ID</option><option value="Driving Licence">Driving Licence</option></select><input id="kycFile" type="file" accept="image/*,.pdf" required><button class="full" id="kycButton">Submit KYC</button></form><p id="kycStatus" class="message"></p></div></div>
   <button class="full gray" onclick="logout()">Logout</button>
  </section>
 </div>
@@ -472,7 +472,7 @@ window.openPage=function(page){
  if(page==="orders"){loadOrders();}
  if(page==="wallet"){loadWallet();loadWithdrawals();resetWithdrawScreen()}
  if(page==="support"){markCustomerBadgeSeen("messages");loadSupport();}
- if(page==="profile")loadProfile().then(()=>loadKyc(currentUser));
+ if(page==="profile"){loadProfile();loadKyc(currentUser);}
 };
 
 window.toggleProfile=function(){
@@ -940,8 +940,6 @@ async function loadKyc(user){
   if(error)throw error;
 
   const records=data||[];
-  const statusElDebug=$("verificationStatus"),messageElDebug=$("kycStatus");
-  if(messageElDebug)messageElDebug.textContent="KYC check: "+(loggedInUser.email||"")+". Login ID: "+loggedInUser.id+". Records found: "+records.length+".";
   const normalizeStatus=value=>String(value||"").trim().toLowerCase().replace(/[^a-z]/g,"");
   const approved=records.find(row=>{
    const s=normalizeStatus(row.status);
