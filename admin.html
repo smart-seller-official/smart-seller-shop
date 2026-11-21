@@ -109,7 +109,7 @@ main{padding:12px}
 <button onclick="go('wallet_transactions',this)">▣ Wallet</button>
 <button onclick="go('withdrawals',this)">⇧ Withdrawals <small id="adminWithdrawalsBadge" class="admin-nav-count"></small></button>
 <button onclick="go('kyc_submissions',this)">✓ KYC <small id="adminKycBadge" class="admin-nav-count"></small></button>
-<button onclick="go('customers',this)">♙ Customer Accounts</button>
+<button onclick="go('customers',this)">♙ Customer Accounts <small id="adminCustomersBadge" class="admin-nav-count"></small></button>
 <button onclick="go('support_messages',this)">✉ Customer Service <small id="adminMessagesBadge" class="admin-nav-count"></small></button>
 <button onclick="go('notifications',this)">♧ Notifications</button>
 <button onclick="go('credit_score_history',this)">◷ Credit Score History</button>
@@ -198,9 +198,10 @@ async function refreshAdminBadges(){
    db.from("orders").select("id,status"),
    db.from("support_chat_messages").select("customer_id,sender,sender_role,created_at").order("created_at",{ascending:true}).limit(2000),
    db.from("kyc_submissions").select("id,status"),
-   db.from("withdrawals").select("id,status")
+   db.from("withdrawals").select("id,status"),
+   db.from("profiles").select("id")
   ]);
-  if(results[0].error)throw results[0].error;if(results[1].error)throw results[1].error;if(results[2].error)throw results[2].error;if(results[3].error)throw results[3].error;
+  if(results[0].error)throw results[0].error;if(results[1].error)throw results[1].error;if(results[2].error)throw results[2].error;if(results[3].error)throw results[3].error;if(results[4].error)throw results[4].error;
   const pending=(results[0].data||[]).filter(o=>["pending","pickup","picked_up","picked up"].includes(String(o.status||"").toLowerCase())).length;
   const waitingByCustomer=new Map();
   (results[1].data||[]).forEach(m=>{
@@ -212,11 +213,13 @@ async function refreshAdminBadges(){
   const waiting=[...waitingByCustomer.values()].reduce((sum,n)=>sum+n,0);
   const kycPending=(results[2].data||[]).filter(x=>String(x.status||"").trim().toLowerCase()==="pending").length;
   const withdrawalsPending=(results[3].data||[]).filter(x=>String(x.status||"").trim().toLowerCase()==="pending").length;
-  const ob=document.getElementById("adminOrdersBadge"),mb=document.getElementById("adminMessagesBadge"),kb=document.getElementById("adminKycBadge"),wb=document.getElementById("adminWithdrawalsBadge");
+  const customerCount=(results[4].data||[]).length;
+  const ob=document.getElementById("adminOrdersBadge"),mb=document.getElementById("adminMessagesBadge"),kb=document.getElementById("adminKycBadge"),wb=document.getElementById("adminWithdrawalsBadge"),cb=document.getElementById("adminCustomersBadge");
   if(ob)ob.textContent=pending?String(pending):"";
   if(mb){mb.textContent=waiting?String(waiting):"";mb.style.display=waiting?"inline-block":"none";}
   if(kb){kb.textContent=kycPending?String(kycPending):"";kb.style.display=kycPending?"inline-block":"none";}
   if(wb){wb.textContent=withdrawalsPending?String(withdrawalsPending):"";wb.style.display=withdrawalsPending?"inline-block":"none";}
+  if(cb){cb.textContent=customerCount?String(customerCount):"";cb.style.display=customerCount?"inline-block":"none";}
  }catch(e){console.warn("Admin notification counts:",e.message)}
 }
 
@@ -225,7 +228,7 @@ async function start(){
  document.getElementById("layout").style.display="flex";
  await go("dashboard",document.querySelector("aside button"));
  await refreshAdminBadges();
- if(!window.adminBadgeTimer)window.adminBadgeTimer=setInterval(()=>{refreshAdminBadges();if(current==="kyc_submissions")kycPage();if(current==="withdrawals")withdrawalsPage();},5000);
+ if(!window.adminBadgeTimer)window.adminBadgeTimer=setInterval(()=>{refreshAdminBadges();if(current==="kyc_submissions")kycPage();if(current==="withdrawals")withdrawalsPage();if(current==="customers")customersPage();},5000);
 }
 async function check(){
  if(!db)return;
@@ -747,19 +750,17 @@ async function kycStatus(id,status){
 async function customersPage(version=pageVersion){
  await loadCustomers();if(!pageIs("customers",version))return;
  putContent(`<h2>Customer Accounts</h2>
- <p class="muted">Delete Account permanently removes the customer's account and related records. This cannot be undone.</p>
  <div class="panel"><input id="customerSearch" placeholder="Search customer name or Gmail" oninput="filterCustomerAccounts()"><div id="customerAccountsList"></div></div>`,"customers",version);
  renderCustomerAccounts(customers);
 }
 function renderCustomerAccounts(rows){
  const box=document.getElementById("customerAccountsList");if(!box)return;
  box.innerHTML=rows.map(c=>`
-  <div class="customer">
-   <b>${esc(c.full_name||"Name not available")}</b><br>
-   <span class="muted">${esc(c.email||"Email not available")}</span>
-   <p class="muted">Phone: ${esc(c.phone||"Not available")}</p>
-   <button onclick="openCustomerProfile('${esc(c.id)}')">View Customer Details</button>
-   <button class="red" onclick="deleteCustomerAccount('${esc(c.id)}')">Delete Account</button>
+  <div class="kyc-row">
+   <span class="kyc-customer" onclick="openCustomerProfile('${esc(c.id)}')">${esc(c.full_name||"Name not available")} — ${esc(c.email||"Email not available")}</span>
+   <span class="muted">${esc(c.phone||"Phone not available")}</span>
+   <button class="gray" onclick="openCustomerProfile('${esc(c.id)}')">Details</button>
+   <button class="red" onclick="deleteCustomerAccount('${esc(c.id)}')">Delete</button>
   </div>`).join("")||"No customers found.";
 }
 function filterCustomerAccounts(){
