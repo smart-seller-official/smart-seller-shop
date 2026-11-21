@@ -245,7 +245,15 @@ async function check(){
 }
 async function loadCustomers(){
  const r=await db.from("profiles").select("*").limit(1000);
- if(r.error)throw r.error;customers=r.data||[];
+ if(r.error)throw r.error;
+ const seenIds=new Set(),seenEmails=new Set();
+ customers=(r.data||[]).filter(c=>{
+  const id=String(c.id||"").trim(),email=String(c.email||"").trim().toLowerCase();
+  if(id&&seenIds.has(id))return false;
+  if(email&&seenEmails.has(email))return false;
+  if(id)seenIds.add(id);if(email)seenEmails.add(email);
+  return true;
+ });
 }
 async function loadProducts(){
  const r=await db.from("products").select("*").limit(1000);
@@ -272,26 +280,40 @@ function renderSimple(data){
 async function openCustomerProfile(id){
  const modal=document.getElementById("customerProfileModal");
  const box=document.getElementById("customerProfileContent");
- modal.style.display="block";box.innerHTML="Loading customer details...";
+ modal.style.display="block";box.innerHTML="Loading customer details and history...";
  try{
-  const [pr,or,wr,kr]=await Promise.all([
+  const requests=await Promise.all([
    db.from("profiles").select("*").eq("id",id).maybeSingle(),
    db.from("orders").select("*").eq("customer_id",id).order("created_at",{ascending:false}),
    db.from("withdrawals").select("*").eq("customer_id",id).order("created_at",{ascending:false}),
-   db.from("kyc_submissions").select("*").eq("customer_id",id).order("created_at",{ascending:false})
+   db.from("kyc_submissions").select("*").eq("customer_id",id).order("created_at",{ascending:false}),
+   db.from("wallet_transactions").select("*").eq("customer_id",id).order("created_at",{ascending:false}),
+   db.from("customer_products").select("*").eq("customer_id",id).order("created_at",{ascending:false}),
+   db.from("credit_score_history").select("*").eq("customer_id",id).order("created_at",{ascending:false}),
+   db.from("support_chat_messages").select("*").eq("customer_id",id).order("created_at",{ascending:true})
   ]);
-  if(pr.error)throw pr.error;if(or.error)throw or.error;if(wr.error)throw wr.error;if(kr.error)throw kr.error;
+  const [pr,or,wr,kr,wallet,cp,credit,chat]=requests;
+  if(pr.error)throw pr.error;
   const p=pr.data||{};
   const fields=Object.entries(p).map(([key,value])=>`
    <div class="profile-field"><b>${esc(key.replaceAll("_"," ").toUpperCase())}</b>
    <p>${esc(value===null?"":typeof value==="object"?JSON.stringify(value):value)}</p></div>
   `).join("");
+  const history=(result,title)=>{
+   if(result.error)return `<h3>${title}</h3><p class="error">History load error: ${esc(result.error.message)}</p>`;
+   const rows=result.data||[];
+   return `<h3>${title} (${rows.length})</h3>${renderSimple(rows)}`;
+  };
   box.innerHTML=`
-   <h2>Customer Profile</h2>
+   <h2>${esc(p.full_name||p.email||"Customer")} — ${esc(p.email||"Email not available")}</h2>
    <div class="profile-grid">${fields||"No profile details found."}</div>
-   <h3>Customer Orders (${or.data.length})</h3>${renderSimple(or.data)}
-   <h3>Withdrawal Requests (${wr.data.length})</h3>${renderSimple(wr.data)}
-   <h3>KYC Records (${kr.data.length})</h3>${renderSimple(kr.data)}
+   ${history(or,"Customer Orders")}
+   ${history(wr,"Withdrawal Requests")}
+   ${history(wallet,"Wallet / Balance History")}
+   ${history(kr,"KYC Records")}
+   ${history(cp,"Customer Products")}
+   ${history(credit,"Credit Score History")}
+   ${history(chat,"Customer Service Messages")}
   `;
  }catch(e){box.innerHTML="<p class='error'>"+esc(e.message)+"</p>"}
 }
