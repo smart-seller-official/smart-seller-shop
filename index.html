@@ -188,12 +188,6 @@ button,input,select,textarea{font-size:14px}
 </div>
 
 <div id="dashboard" class="hidden">
- <div id="kycLockBanner" class="kyc-lock-note hidden">
-  <strong>🔒 KYC Verification Required</strong><br>
-  Your account is not verified. Please complete your KYC verification and wait for approval.
-  <button class="full" onclick="openPage('profile')">Complete KYC Verification</button>
- </div>
-
  <section id="homePage" class="page">
   <div class="page-title"><h2>Dashboard</h2><p class="muted">Here's your account overview.</p></div>
   <div class="stats">
@@ -337,7 +331,7 @@ function requireKyc(){
 
 function updateKycLocks(){
  const locked=!isKycApproved;
- $("kycLockBanner").classList.toggle("hidden",!locked);
+ const banner=$("kycLockBanner");if(banner)banner.classList.toggle("hidden",!locked);
  $("withdrawOpenButton").disabled=locked;
  $("supportButton").disabled=locked;
  document.querySelectorAll(".kyc-action").forEach(button=>{
