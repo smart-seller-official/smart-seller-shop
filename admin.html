@@ -246,14 +246,16 @@ async function check(){
 async function loadCustomers(){
  const r=await db.from("profiles").select("*").limit(1000);
  if(r.error)throw r.error;
- const seenIds=new Set(),seenEmails=new Set();
- customers=(r.data||[]).filter(c=>{
-  const id=String(c.id||"").trim(),email=String(c.email||"").trim().toLowerCase();
-  if(id&&seenIds.has(id))return false;
-  if(email&&seenEmails.has(email))return false;
-  if(id)seenIds.add(id);if(email)seenEmails.add(email);
-  return true;
+ const seenEmails=new Set(),seenNames=new Set(),unique=[];
+ (r.data||[]).forEach(c=>{
+  const email=String(c.email||"").trim().toLowerCase();
+  const name=String(c.full_name||"").trim().toLowerCase().replace(/\\s+/g," ");
+  if((email&&seenEmails.has(email))||(name&&name!=="name not available"&&seenNames.has(name)))return;
+  if(email)seenEmails.add(email);
+  if(name&&name!=="name not available")seenNames.add(name);
+  unique.push(c);
  });
+ customers=unique;
 }
 async function loadProducts(){
  const r=await db.from("products").select("*").limit(1000);
