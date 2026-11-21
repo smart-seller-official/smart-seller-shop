@@ -940,6 +940,8 @@ async function loadKyc(user){
   if(error)throw error;
 
   const records=data||[];
+  const statusElDebug=$("verificationStatus"),messageElDebug=$("kycStatus");
+  if(messageElDebug)messageElDebug.textContent="KYC check: "+(loggedInUser.email||"")+". Login ID: "+loggedInUser.id+". Records found: "+records.length+".";
   const normalizeStatus=value=>String(value||"").trim().toLowerCase().replace(/[^a-z]/g,"");
   const approved=records.find(row=>{
    const s=normalizeStatus(row.status);
