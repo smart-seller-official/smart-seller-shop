@@ -277,6 +277,15 @@ function renderSimple(data){
  return "<div class='tablewrap'><table><tr>"+keys.map(k=>"<th>"+esc(k)+"</th>").join("")+"</tr>"+
  data.map(x=>"<tr>"+keys.map(k=>"<td>"+esc(typeof x[k]==="object"?JSON.stringify(x[k]):x[k])+"</td>").join("")+"</tr>").join("")+"</table></div>";
 }
+function renderCustomerLinkedTable(data){
+ if(!data?.length)return "No records found";
+ const keys=Object.keys(data[0]);
+ return "<div class='tablewrap'><table><tr>"+keys.map(k=>"<th>"+esc(k.replaceAll("_"," "))+"</th>").join("")+"</tr>"+
+ data.map(x=>"<tr>"+keys.map(k=>{
+  if(k==="customer_id"&&x[k])return "<td>"+customerLink(x[k])+"</td>";
+  const v=x[k];return "<td>"+esc(v===null?"":typeof v==="object"?JSON.stringify(v):v)+"</td>";
+ }).join("")+"</tr>").join("")+"</table></div>";
+}
 
 /* CUSTOMER PROFILE - OTHER ADMIN SECTIONS */
 async function openCustomerProfile(id){
@@ -526,7 +535,7 @@ async function customerProductsPage(version=pageVersion){
 }
 function renderCP(ids){
  const target=document.getElementById("customerProductList");if(!target||!target.isConnected)return;
- target.innerHTML=ids.map(id=>`<div class="customer" onclick="showCustomerProducts('${esc(id)}')"><b>${esc(customerName(id))}</b><br><span class="muted">${esc(customerEmail(id))} | ${(window.customerProductGroups[id]||[]).length} products</span></div>`).join("")||"No customer products found.";
+ target.innerHTML=ids.map(id=>`<div class="customer"><b class="click-customer" onclick="openCustomerProfile('${esc(id)}')">${esc(customerName(id))}</b><br><span class="click-customer" onclick="openCustomerProfile('${esc(id)}')">${esc(customerEmail(id))}</span><p class="muted">${(window.customerProductGroups[id]||[]).length} products</p><button class="gray" onclick="showCustomerProducts('${esc(id)}')">View Products</button></div>`).join("")||"No customer products found.";
 }
 function filterCP(){
  const q=val("cpSearch").toLowerCase(),groups=window.customerProductGroups||{};
@@ -731,10 +740,10 @@ async function withdrawalsPage(version=pageVersion){
   const pending=String(x.status||"").toLowerCase().trim()==="pending";
   const customer=customers.find(c=>String(c.id)===String(x.customer_id));
   return `<div class="kyc-row">
-   <span class="kyc-customer" onclick="openWithdrawalCustomer('${esc(x.customer_id)}','${esc(x.id)}')">${esc(customer?.full_name||"Name not available")} — ${esc(customer?.email||"Email not available")}</span>
+   <span class="kyc-customer" onclick="openCustomerProfile('${esc(x.customer_id)}')">${esc(customer?.full_name||"Name not available")} — ${esc(customer?.email||"Email not available")}</span>
    <span>$${money(x.amount)} · ${esc(x.method||"Not available")}</span>
    <b class="${pending?"ok":"muted"}">${esc(x.status||"Pending")}</b>
-   <button class="gray" onclick="openWithdrawalCustomer('${esc(x.customer_id)}','${esc(x.id)}')">Details</button>
+   <button class="gray" onclick="openCustomerProfile('${esc(x.customer_id)}')">Customer History</button>
    ${pending?`<button class="green" onclick="withdrawStatus('${esc(x.id)}','completed')">Approve</button><button class="red" onclick="withdrawStatus('${esc(x.id)}','rejected')">Reject</button>`:`<span class="muted">Decision already made</span>`}
   </div>`;
  }).join("")||"No withdrawal requests.";
@@ -760,7 +769,7 @@ async function kycPage(version=pageVersion){
  target.innerHTML=(r.data||[]).map(x=>{
   const pending=String(x.status||"").toLowerCase().trim()==="pending",customer=customers.find(c=>String(c.id)===String(x.customer_id));
   return `<div class="kyc-row">
-   <span class="kyc-customer" onclick="openKycCustomer('${esc(x.customer_id)}')">${esc(customer?.full_name||"Name not available")} — ${esc(customer?.email||"Email not available")}</span>
+   <span class="kyc-customer" onclick="openCustomerProfile('${esc(x.customer_id)}')">${esc(customer?.full_name||"Name not available")} — ${esc(customer?.email||"Email not available")}</span>
    <span>${esc(x.document_type||"Not available")}</span>
    <b class="${pending?"ok":"muted"}">${esc(x.status||"Pending")}</b>
    ${pending?`<button class="green" onclick="kycStatus('${esc(x.id)}','approved')">Approve</button><button class="red" onclick="kycStatus('${esc(x.id)}','rejected')">Reject</button>`:`<span class="muted">Decision already made</span>`}
@@ -861,10 +870,11 @@ function renderSupportCustomers(){
  box.innerHTML=ids.map(id=>{
   const msgs=groups[id],last=msgs[msgs.length-1];
   const waiting=String(last.sender_role||last.sender||"").toLowerCase()!=="admin";
-  return `<div class="customer" onclick="openSupportChat('${esc(id)}')">
-   <b>${esc(customerName(id))}</b><br><span class="click-customer">${esc(customerEmail(id))}</span>
+  return `<div class="customer">
+   <b class="click-customer" onclick="openCustomerProfile('${esc(id)}')">${esc(customerName(id))}</b><br><span class="click-customer" onclick="openCustomerProfile('${esc(id)}')">${esc(customerEmail(id))}</span>
    <p class="muted">${msgs.length} messages · Latest: ${esc(last.message||"")}</p>
    <b>${waiting?"Waiting for admin reply":"Admin replied"}</b>
+   <button class="gray" onclick="openSupportChat('${esc(id)}')">Open Chat</button>
   </div>`;
  }).join("")||"No customer messages.";
 }
@@ -929,7 +939,7 @@ async function sendReply(){
 async function notificationsPage(version=pageVersion){
  const r=await db.from("notifications").select("*").order("created_at",{ascending:false}).limit(300);
  if(r.error)throw r.error;if(!pageIs("notifications",version))return;
- putContent(`<h2>Notifications</h2><p class="muted">Website notifications yahan show hongi.</p><button class="gray" onclick="notificationsPage()">Refresh</button><div class="panel">${renderSimple(r.data||[])}</div>`,"notifications",version);
+ putContent(`<h2>Notifications</h2><p class="muted">Website notifications yahan show hongi.</p><button class="gray" onclick="notificationsPage()">Refresh</button><div class="panel">${renderCustomerLinkedTable(r.data||[])}</div>`,"notifications",version);
 }
 
 /* CREDIT SCORE */
@@ -943,7 +953,7 @@ async function creditPage(version=pageVersion){
  <label>New Credit Score</label><input id="newScore" type="number" min="0" max="100">
  <label>Reason</label><input id="scoreReason" placeholder="Reason for score change">
  <button class="green" onclick="saveCreditScore()">Save Credit Score</button></div>
- <div class="panel"><h3>Credit Score History</h3>${renderSimple(r.data||[])}</div>`,"credit_score_history",version);
+ <div class="panel"><h3>Credit Score History</h3>${renderCustomerLinkedTable(r.data||[])}</div>`,"credit_score_history",version);
 }
 async function saveCreditScore(){
  const cid=val("ccustomer"),score=Number(val("newScore")),reason=val("scoreReason");
