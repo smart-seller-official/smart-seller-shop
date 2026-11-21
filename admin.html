@@ -20,6 +20,7 @@ label{font-size:13px;font-weight:bold}
 aside{width:245px;background:#17243b;padding:12px;flex-shrink:0}
 aside button{display:block;width:100%;text-align:left;background:transparent;color:#e2e9f5;padding:12px}
 aside button.active,aside button:hover{background:#34445f;color:#7ee6d2}.admin-nav-count{float:right;background:#e5485d;color:white;border-radius:12px;padding:2px 7px;font-size:10px;min-width:18px;text-align:center}
+.kyc-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap;background:#fff;padding:7px 10px;margin:0 0 6px;border:1px solid #e6eaf0;border-radius:8px;font-size:12px}.kyc-customer{flex:1 1 250px;min-width:0;color:#5145c5;font-weight:700;cursor:pointer;overflow-wrap:anywhere}.kyc-row button{padding:6px 9px;font-size:11px;margin:0}
 main{padding:20px;flex:1;min-width:0}
 .panel,.stat{background:white;padding:16px;border-radius:11px;margin-bottom:14px;box-shadow:0 2px 9px #17243b0c}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
@@ -107,7 +108,7 @@ main{padding:12px}
 <button onclick="go('orders',this)">🛒 Orders <small id="adminOrdersBadge" class="admin-nav-count"></small></button>
 <button onclick="go('wallet_transactions',this)">▣ Wallet</button>
 <button onclick="go('withdrawals',this)">⇧ Withdrawals</button>
-<button onclick="go('kyc_submissions',this)">✓ KYC</button>
+<button onclick="go('kyc_submissions',this)">✓ KYC <small id="adminKycBadge" class="admin-nav-count"></small></button>
 <button onclick="go('customers',this)">♙ Customer Accounts</button>
 <button onclick="go('support_messages',this)">✉ Customer Service <small id="adminMessagesBadge" class="admin-nav-count"></small></button>
 <button onclick="go('notifications',this)">♧ Notifications</button>
@@ -195,9 +196,10 @@ async function refreshAdminBadges(){
  try{
   const results=await Promise.all([
    db.from("orders").select("id,status"),
-   db.from("support_chat_messages").select("customer_id,sender,sender_role,created_at").order("created_at",{ascending:true}).limit(2000)
+   db.from("support_chat_messages").select("customer_id,sender,sender_role,created_at").order("created_at",{ascending:true}).limit(2000),
+   db.from("kyc_submissions").select("id,status")
   ]);
-  if(results[0].error)throw results[0].error;if(results[1].error)throw results[1].error;
+  if(results[0].error)throw results[0].error;if(results[1].error)throw results[1].error;if(results[2].error)throw results[2].error;
   const pending=(results[0].data||[]).filter(o=>["pending","pickup","picked_up","picked up"].includes(String(o.status||"").toLowerCase())).length;
   const waitingByCustomer=new Map();
   (results[1].data||[]).forEach(m=>{
@@ -207,9 +209,11 @@ async function refreshAdminBadges(){
    else if(role==="customer")waitingByCustomer.set(id,(waitingByCustomer.get(id)||0)+1);
   });
   const waiting=[...waitingByCustomer.values()].reduce((sum,n)=>sum+n,0);
-  const ob=document.getElementById("adminOrdersBadge"),mb=document.getElementById("adminMessagesBadge");
+  const kycPending=(results[2].data||[]).filter(x=>String(x.status||"").trim().toLowerCase()==="pending").length;
+  const ob=document.getElementById("adminOrdersBadge"),mb=document.getElementById("adminMessagesBadge"),kb=document.getElementById("adminKycBadge");
   if(ob)ob.textContent=pending?String(pending):"";
   if(mb){mb.textContent=waiting?String(waiting):"";mb.style.display=waiting?"inline-block":"none";}
+  if(kb){kb.textContent=kycPending?String(kycPending):"";kb.style.display=kycPending?"inline-block":"none";}
  }catch(e){console.warn("Admin notification counts:",e.message)}
 }
 
@@ -218,7 +222,7 @@ async function start(){
  document.getElementById("layout").style.display="flex";
  await go("dashboard",document.querySelector("aside button"));
  await refreshAdminBadges();
- if(!window.adminBadgeTimer)window.adminBadgeTimer=setInterval(refreshAdminBadges,5000);
+ if(!window.adminBadgeTimer)window.adminBadgeTimer=setInterval(()=>{refreshAdminBadges();if(current==="kyc_submissions")kycPage();},5000);
 }
 async function check(){
  if(!db)return;
@@ -721,10 +725,11 @@ async function kycPage(version=pageVersion){
  const target=document.getElementById("kycList");if(!target)return;
  target.innerHTML=(r.data||[]).map(x=>{
   const pending=String(x.status||"").toLowerCase().trim()==="pending",customer=customers.find(c=>String(c.id)===String(x.customer_id));
-  return `<div class="panel">
-   <button class="green" onclick="openKycCustomer('${esc(x.customer_id)}')">${esc(customer?.full_name||"Name not available")} — ${esc(customer?.email||"Email not available")}</button>
-   <p>Document: ${esc(x.document_type||"Not available")}</p><p>Status: <b>${esc(x.status||"Pending")}</b></p>
-   ${pending?`<button class="green" onclick="kycStatus('${esc(x.id)}','approved')">Approve</button><button class="red" onclick="kycStatus('${esc(x.id)}','rejected')">Reject</button>`:`<p class="muted">Decision already made. No further action allowed.</p>`}
+  return `<div class="kyc-row">
+   <span class="kyc-customer" onclick="openKycCustomer('${esc(x.customer_id)}')">${esc(customer?.full_name||"Name not available")} — ${esc(customer?.email||"Email not available")}</span>
+   <span>${esc(x.document_type||"Not available")}</span>
+   <b class="${pending?"ok":"muted"}">${esc(x.status||"Pending")}</b>
+   ${pending?`<button class="green" onclick="kycStatus('${esc(x.id)}','approved')">Approve</button><button class="red" onclick="kycStatus('${esc(x.id)}','rejected')">Reject</button>`:`<span class="muted">Decision already made</span>`}
   </div>`;
  }).join("")||"No KYC requests.";
 }
