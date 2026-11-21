@@ -213,13 +213,17 @@ async function refreshAdminBadges(){
   const waiting=[...waitingByCustomer.values()].reduce((sum,n)=>sum+n,0);
   const kycPending=(results[2].data||[]).filter(x=>String(x.status||"").trim().toLowerCase()==="pending").length;
   const withdrawalsPending=(results[3].data||[]).filter(x=>String(x.status||"").trim().toLowerCase()==="pending").length;
-  const customerCount=(results[4].data||[]).length;
+  const customerRows=results[4].data||[];
+  const customerCount=customerRows.length;
+  const seenCustomerIds=readSeenCustomerIds();
+  const newCustomerCount=current==="customers"?0:customerRows.filter(c=>!seenCustomerIds.has(String(c.id))).length;
+  if(current==="customers")saveSeenCustomerIds(customerRows.map(c=>c.id));
   const ob=document.getElementById("adminOrdersBadge"),mb=document.getElementById("adminMessagesBadge"),kb=document.getElementById("adminKycBadge"),wb=document.getElementById("adminWithdrawalsBadge"),cb=document.getElementById("adminCustomersBadge");
   if(ob)ob.textContent=pending?String(pending):"";
   if(mb){mb.textContent=waiting?String(waiting):"";mb.style.display=waiting?"inline-block":"none";}
   if(kb){kb.textContent=kycPending?String(kycPending):"";kb.style.display=kycPending?"inline-block":"none";}
   if(wb){wb.textContent=withdrawalsPending?String(withdrawalsPending):"";wb.style.display=withdrawalsPending?"inline-block":"none";}
-  if(cb){cb.textContent=customerCount?String(customerCount):"";cb.style.display=customerCount?"inline-block":"none";}
+  if(cb){cb.textContent=newCustomerCount?String(newCustomerCount):"";cb.style.display=newCustomerCount?"inline-block":"none";}
  }catch(e){console.warn("Admin notification counts:",e.message)}
 }
 
@@ -747,8 +751,17 @@ async function kycStatus(id,status){
 }
 
 /* CUSTOMER ACCOUNTS */
+function readSeenCustomerIds(){
+ try{return new Set(JSON.parse(localStorage.getItem("smartSellerSeenCustomerIds")||"[]").map(String));}
+ catch(e){return new Set();}
+}
+function saveSeenCustomerIds(ids){
+ try{localStorage.setItem("smartSellerSeenCustomerIds",JSON.stringify(ids.map(String)));}
+ catch(e){console.warn("Could not save viewed customer accounts:",e.message);}
+}
 async function customersPage(version=pageVersion){
  await loadCustomers();if(!pageIs("customers",version))return;
+ saveSeenCustomerIds(customers.map(c=>c.id));
  putContent(`<h2>Customer Accounts</h2>
  <div class="panel"><input id="customerSearch" placeholder="Search customer name or Gmail" oninput="filterCustomerAccounts()"><div id="customerAccountsList"></div></div>`,"customers",version);
  renderCustomerAccounts(customers);
