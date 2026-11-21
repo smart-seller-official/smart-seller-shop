@@ -313,6 +313,15 @@ async function openCustomerProfile(id){
   const history=(result,title)=>{
    if(result.error)return `<h3>${title}</h3><p class="error">History load error: ${esc(result.error.message)}</p>`;
    const rows=result.data||[];
+   if(title==="Withdrawal Requests"){
+    const withdrawalRows=rows.map(w=>`<div class="kyc-row">
+     <span>${money(w.amount)} · ${esc(w.method||"Not available")}</span>
+     <b>${esc(w.status||"Pending")}</b>
+     <span class="muted">${esc(w.created_at||"")}</span>
+     ${String(w.status||"").toLowerCase().trim()==="pending"?`<button class="green" onclick="withdrawStatus('${esc(w.id)}','completed','${esc(id)}')">Approve</button><button class="red" onclick="withdrawStatus('${esc(w.id)}','rejected','${esc(id)}')">Reject</button>`:""}
+    </div>`).join("");
+    return `<h3>${title} (${rows.length})</h3>${withdrawalRows||"No withdrawal requests."}`;
+   }
    return `<h3>${title} (${rows.length})</h3>${renderSimple(rows)}`;
   };
   box.innerHTML=`
@@ -736,26 +745,32 @@ async function withdrawalsPage(version=pageVersion){
  if(r.error)throw r.error;if(!pageIs("withdrawals",version))return;
  putContent(`<h2>Withdrawals</h2><button class="gray" onclick="withdrawalsPage()">Refresh Requests</button><div id="withdrawList"></div>`,"withdrawals",version);
  const target=document.getElementById("withdrawList");if(!target)return;
- target.innerHTML=(r.data||[]).map(x=>{
-  const pending=String(x.status||"").toLowerCase().trim()==="pending";
-  const customer=customers.find(c=>String(c.id)===String(x.customer_id));
+ const groups=new Map();
+ (r.data||[]).forEach(x=>{
+  const id=String(x.customer_id||"unknown");
+  if(!groups.has(id))groups.set(id,[]);
+  groups.get(id).push(x);
+ });
+ target.innerHTML=Array.from(groups.entries()).map(([id,items])=>{
+  const customer=customers.find(c=>String(c.id)===id);
+  const pending=items.filter(x=>String(x.status||"").toLowerCase().trim()==="pending").length;
+  const latest=items[0]||{};
   return `<div class="kyc-row">
-   <span class="kyc-customer" onclick="openCustomerProfile('${esc(x.customer_id)}')">${esc(customer?.full_name||"Name not available")} — ${esc(customer?.email||"Email not available")}</span>
-   <span>$${money(x.amount)} · ${esc(x.method||"Not available")}</span>
-   <b class="${pending?"ok":"muted"}">${esc(x.status||"Pending")}</b>
-   <button class="gray" onclick="openCustomerProfile('${esc(x.customer_id)}')">Customer History</button>
-   ${pending?`<button class="green" onclick="withdrawStatus('${esc(x.id)}','completed')">Approve</button><button class="red" onclick="withdrawStatus('${esc(x.id)}','rejected')">Reject</button>`:`<span class="muted">Decision already made</span>`}
+   <span class="kyc-customer" onclick="openCustomerProfile('${esc(id)}')">${esc(customer?.full_name||"Name not available")} — ${esc(customer?.email||"Email not available")}</span>
+   <span>${items.length} withdrawals · ${pending} pending</span>
+   <span>Latest: ${money(latest.amount)} · ${esc(latest.status||"Pending")}</span>
+   <button class="gray" onclick="openCustomerProfile('${esc(id)}')">Open Full History</button>
   </div>`;
  }).join("")||"No withdrawal requests.";
 }
-async function withdrawStatus(id,status){
+async function withdrawStatus(id,status,customerId=null){
  if(!["completed","rejected"].includes(status))return note("Invalid withdrawal status.",true);
  const adminNote=prompt("Admin note (optional)","");if(adminNote===null)return;
  if(!confirm("Are you sure you want to "+(status==="completed"?"APPROVE":"REJECT")+" this withdrawal?"))return;
  try{
   const r=await db.from("withdrawals").update({status:status,admin_note:adminNote}).eq("id",id).ilike("status","pending").select("id").maybeSingle();
   if(r.error)throw r.error;if(!r.data){note("This withdrawal has already been processed. No changes made.",true);if(current==="withdrawals")await withdrawalsPage();return}
-  note(status==="completed"?"Withdrawal approved and marked Completed.":"Withdrawal rejected. Refund trigger has been activated.");if(current==="withdrawals")await withdrawalsPage();
+  note(status==="completed"?"Withdrawal approved and marked Completed.":"Withdrawal rejected. Refund trigger has been activated.");if(customerId&&document.getElementById("customerProfileModal")?.style.display==="block")await openCustomerProfile(customerId);if(current==="withdrawals")await withdrawalsPage();
  }catch(e){note("Withdrawal error: "+e.message,true)}
 }
 
