@@ -107,7 +107,7 @@ main{padding:12px}
 <button onclick="go('customer_products',this)">▤ Customer Products</button>
 <button onclick="go('orders',this)">🛒 Orders <small id="adminOrdersBadge" class="admin-nav-count"></small></button>
 <button onclick="go('wallet_transactions',this)">▣ Wallet</button>
-<button onclick="go('withdrawals',this)">⇧ Withdrawals</button>
+<button onclick="go('withdrawals',this)">⇧ Withdrawals <small id="adminWithdrawalsBadge" class="admin-nav-count"></small></button>
 <button onclick="go('kyc_submissions',this)">✓ KYC <small id="adminKycBadge" class="admin-nav-count"></small></button>
 <button onclick="go('customers',this)">♙ Customer Accounts</button>
 <button onclick="go('support_messages',this)">✉ Customer Service <small id="adminMessagesBadge" class="admin-nav-count"></small></button>
@@ -197,9 +197,10 @@ async function refreshAdminBadges(){
   const results=await Promise.all([
    db.from("orders").select("id,status"),
    db.from("support_chat_messages").select("customer_id,sender,sender_role,created_at").order("created_at",{ascending:true}).limit(2000),
-   db.from("kyc_submissions").select("id,status")
+   db.from("kyc_submissions").select("id,status"),
+   db.from("withdrawals").select("id,status")
   ]);
-  if(results[0].error)throw results[0].error;if(results[1].error)throw results[1].error;if(results[2].error)throw results[2].error;
+  if(results[0].error)throw results[0].error;if(results[1].error)throw results[1].error;if(results[2].error)throw results[2].error;if(results[3].error)throw results[3].error;
   const pending=(results[0].data||[]).filter(o=>["pending","pickup","picked_up","picked up"].includes(String(o.status||"").toLowerCase())).length;
   const waitingByCustomer=new Map();
   (results[1].data||[]).forEach(m=>{
@@ -210,10 +211,12 @@ async function refreshAdminBadges(){
   });
   const waiting=[...waitingByCustomer.values()].reduce((sum,n)=>sum+n,0);
   const kycPending=(results[2].data||[]).filter(x=>String(x.status||"").trim().toLowerCase()==="pending").length;
-  const ob=document.getElementById("adminOrdersBadge"),mb=document.getElementById("adminMessagesBadge"),kb=document.getElementById("adminKycBadge");
+  const withdrawalsPending=(results[3].data||[]).filter(x=>String(x.status||"").trim().toLowerCase()==="pending").length;
+  const ob=document.getElementById("adminOrdersBadge"),mb=document.getElementById("adminMessagesBadge"),kb=document.getElementById("adminKycBadge"),wb=document.getElementById("adminWithdrawalsBadge");
   if(ob)ob.textContent=pending?String(pending):"";
   if(mb){mb.textContent=waiting?String(waiting):"";mb.style.display=waiting?"inline-block":"none";}
   if(kb){kb.textContent=kycPending?String(kycPending):"";kb.style.display=kycPending?"inline-block":"none";}
+  if(wb){wb.textContent=withdrawalsPending?String(withdrawalsPending):"";wb.style.display=withdrawalsPending?"inline-block":"none";}
  }catch(e){console.warn("Admin notification counts:",e.message)}
 }
 
@@ -222,7 +225,7 @@ async function start(){
  document.getElementById("layout").style.display="flex";
  await go("dashboard",document.querySelector("aside button"));
  await refreshAdminBadges();
- if(!window.adminBadgeTimer)window.adminBadgeTimer=setInterval(()=>{refreshAdminBadges();if(current==="kyc_submissions")kycPage();},5000);
+ if(!window.adminBadgeTimer)window.adminBadgeTimer=setInterval(()=>{refreshAdminBadges();if(current==="kyc_submissions")kycPage();if(current==="withdrawals")withdrawalsPage();},5000);
 }
 async function check(){
  if(!db)return;
@@ -695,13 +698,13 @@ async function withdrawalsPage(version=pageVersion){
  const target=document.getElementById("withdrawList");if(!target)return;
  target.innerHTML=(r.data||[]).map(x=>{
   const pending=String(x.status||"").toLowerCase().trim()==="pending";
-  return `<div class="panel">
-   <h3>${customerLink(x.customer_id)}</h3>
-   <button onclick="openWithdrawalCustomer('${esc(x.customer_id)}','${esc(x.id)}')">Open Customer Details</button>
-   <p>Amount: $${money(x.amount)} | Method: ${esc(x.method)}</p>
-   <p>Account Details:</p><pre>${esc(typeof x.account_details==="object"?JSON.stringify(x.account_details,null,2):x.account_details)}</pre>
-   <p>Status: <b>${esc(x.status)}</b></p>
-   ${pending?`<button class="green" onclick="withdrawStatus('${esc(x.id)}','completed')">Paid / Approve</button><button class="red" onclick="withdrawStatus('${esc(x.id)}','rejected')">Reject</button>`:`<p class="muted">Decision already made. No further action allowed.</p>`}
+  const customer=customers.find(c=>String(c.id)===String(x.customer_id));
+  return `<div class="kyc-row">
+   <span class="kyc-customer" onclick="openWithdrawalCustomer('${esc(x.customer_id)}','${esc(x.id)}')">${esc(customer?.full_name||"Name not available")} — ${esc(customer?.email||"Email not available")}</span>
+   <span>$${money(x.amount)} · ${esc(x.method||"Not available")}</span>
+   <b class="${pending?"ok":"muted"}">${esc(x.status||"Pending")}</b>
+   <button class="gray" onclick="openWithdrawalCustomer('${esc(x.customer_id)}','${esc(x.id)}')">Details</button>
+   ${pending?`<button class="green" onclick="withdrawStatus('${esc(x.id)}','completed')">Approve</button><button class="red" onclick="withdrawStatus('${esc(x.id)}','rejected')">Reject</button>`:`<span class="muted">Decision already made</span>`}
   </div>`;
  }).join("")||"No withdrawal requests.";
 }
