@@ -997,7 +997,7 @@ $("kycForm").addEventListener("submit",async e=>{
   isKycApproved=false;
   isKycPending=true;
   const statusEl=$("verificationStatus"),section=$("kycSection"),messageEl=$("kycStatus");
-  if(statusEl){statusEl.textContent="WAIT FOR VERIFICATION";statusEl.className="status pending";}
+  if(statusEl){statusEl.textContent="VERIFICATION PENDING";statusEl.className="status pending";}
   if(section)section.classList.add("hidden");
   if(messageEl)messageEl.textContent="KYC submitted successfully. Please wait for admin verification. You cannot submit KYC again while it is pending.";
   updateKycLocks();
