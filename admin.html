@@ -616,7 +616,7 @@ async function ordersPage(version=pageVersion){
  <option value="">All Customers</option>
  ${customers.map(c=>`<option value="${esc(c.id)}">${esc(c.full_name||c.email||c.id)} — ${esc(c.email||"")}</option>`).join("")}
  </select>
- <button class="gray" onclick="loadOrders()">Refresh</button><div id="orderList"></div></div>`,"orders",version);
+ <button class="gray" onclick="loadOrders()">Refresh</button><div id="orderList"></div><button type="button" class="gray" id="adminRecentOrdersToggle" style="width:100%;margin-top:12px" onclick="toggleAdminRecentOrders()">Recently Orders ▾</button><div id="adminRecentOrders" style="display:none;margin-top:10px"></div></div>`,"orders",version);
  const customerSelect=document.getElementById("ocustomer"),filterSelect=document.getElementById("orderCustomerFilter");
  if(customerSelect)customerSelect.value=orderCustomerFilterId;if(filterSelect)filterSelect.value=orderCustomerFilterId;
  calcOrder(true);await loadOrders();
@@ -693,6 +693,8 @@ async function loadOrders(){
  customers.forEach(c=>{const cid=String(c.id),balance=calculateAvailableBalance(transactionsByCustomer[cid]||[]);balanceByCustomer[cid]=balance;totalCustomerAvailableBalance+=balance});
  Object.keys(transactionsByCustomer).forEach(cid=>{if(Object.prototype.hasOwnProperty.call(balanceByCustomer,cid))return;const balance=calculateAvailableBalance(transactionsByCustomer[cid]);balanceByCustomer[cid]=balance;totalCustomerAvailableBalance+=balance});
  const visibleRows=selectedCustomer?allRows.filter(x=>String(x.customer_id)===selectedCustomer):allRows;
+ const completedRows=visibleRows.filter(x=>["completed","complete","delivered"].includes(String(x.status||"").toLowerCase().trim()));
+ const activeRows=visibleRows.filter(x=>!["completed","complete","delivered"].includes(String(x.status||"").toLowerCase().trim()));
  const visibleOrderIds=new Set(visibleRows.map(x=>String(x.id))),visibleItems=items.filter(i=>visibleOrderIds.has(String(i.order_id)));
  let pendingTotal=0;
  visibleRows.forEach(x=>{if(String(x.status||"").toLowerCase().trim()!=="pending")return;const oi=visibleItems.filter(i=>String(i.order_id)===String(x.id));const itemTotal=oi.reduce((sum,i)=>sum+Number(i.unit_price||0)*Number(i.quantity||0),0);const price=oi.length?itemTotal:Number(x.total_amount??x.product_price??0);if(Number.isFinite(price))pendingTotal+=price});
@@ -700,13 +702,20 @@ async function loadOrders(){
  const pe=document.getElementById("pendingOrdersTotal"),be=document.getElementById("customerAvailableBalanceTotal");if(pe)pe.textContent="$"+money(pendingTotal);if(be)be.textContent="$"+money(selectedBalance);
  if(!pageIs("orders",version))return;const list=document.getElementById("orderList");if(!list||!list.isConnected)return;
  const statuses=[["pending","Pickup"],["processing","Processing"],["shipping","Shipping"],["completed","Complete"],["cancelled","Cancel"]];
- list.innerHTML=visibleRows.length
+ const renderOrderTable=rows=>rows.length
  ?"<div class='tablewrap'><table><tr><th>Customer</th><th>Customer Available Balance</th><th>Order ID</th><th>Product / Quantity</th><th>Product Price</th><th>Profit</th><th>Expected Return</th><th>Status</th><th>Update</th></tr>"+
- visibleRows.map(x=>{
+ rows.map(x=>{
   const oi=visibleItems.filter(i=>String(i.order_id)===String(x.id)),itemTotal=oi.reduce((sum,i)=>sum+Number(i.unit_price||0)*Number(i.quantity||0),0),price=oi.length?itemTotal:Number(x.total_amount??x.product_price??0),profit=Number(x.admin_profit||0),balance=balanceByCustomer[String(x.customer_id)]||0;
   const itemText=oi.length?oi.map(i=>`<div><b>${esc(i.product_name||"Product")}</b><br>Quantity: ${esc(i.quantity)}<br>Unit Price: $${money(i.unit_price)}</div>`).join("<hr>"):"Product details unavailable",st=String(x.status||"").toLowerCase().trim();
   return `<tr><td>${customerLink(x.customer_id)}<p><button onclick="openCustomerProfile('${esc(x.customer_id)}')">View Full Details</button></p></td><td><b>$${money(balance)}</b></td><td>${esc(x.id)}</td><td>${itemText}</td><td>$${money(price)}</td><td>$${money(profit)}</td><td><b>$${money(price+profit)}</b></td><td><b>${esc(x.status)}</b></td><td><select id="orderstatus_${esc(x.id)}">${statuses.map(([v,l])=>`<option value="${v}" ${st===v?"selected":""}>${l}</option>`).join("")}${!statuses.some(([v])=>v===st)?`<option value="${esc(st)}" selected>${esc(x.status)} (Old Status)</option>`:""}</select><button type="button" onclick="window.updateOrder('${esc(x.id)}')">Save</button></td></tr>`;
  }).join("")+"</table></div>":"No orders found for this customer.";
+ list.innerHTML=activeRows.length?renderOrderTable(activeRows):"No active orders.";
+ const recentBox=document.getElementById("adminRecentOrders");
+ if(recentBox)recentBox.innerHTML=completedRows.length?renderOrderTable(completedRows):"No recently completed orders.";
+}
+function toggleAdminRecentOrders(){
+ const box=document.getElementById("adminRecentOrders"),button=document.getElementById("adminRecentOrdersToggle");if(!box||!button)return;
+ const opening=box.style.display==="none";box.style.display=opening?"block":"none";button.textContent=opening?"Recently Orders ▴":"Recently Orders ▾";
 }
 async function updateOrder(id){
  const select=document.getElementById("orderstatus_"+id);if(!select)return note("Order status select nahi mila.",true);
