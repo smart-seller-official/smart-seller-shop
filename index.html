@@ -619,6 +619,8 @@ async function refreshCustomerBadges(){
   const put=(id,n,label)=>{const el=$(id);if(!el)return;el.textContent=n?(n>99?"99+":String(n)):"";el.classList.toggle("hidden",!n)};
   put("customerOrdersBadge",waitingPickup,"Order");
   put("customerMessagesBadge",newAdminMessages.length,"New Message");
+  const messageBadge=$("customerMessagesBadge");
+  if(messageBadge&&newAdminMessages.length)messageBadge.textContent=newAdminMessages.length+" unread message"+(newAdminMessages.length===1?"":"s");
  }catch(e){console.warn("Notification badge:",e.message)}
 }
 
