@@ -558,8 +558,10 @@ function addProductImage(container,value){
 }
 
 window.loadShop=async function(){
- const box=$("shopList");box.textContent="Loading products...";
+ const box=$("shopList");box.textContent="Checking verification and loading products...";
  try{
+  // Refresh the signed-in customer's KYC before deciding whether Add + is enabled.
+  if(currentUser?.id)await loadKyc(currentUser);
   const [productsResult,addedResult]=await Promise.all([
    db.from("products").select("id,name,description,price,category,image,image_url").order("id",{ascending:false}),
    db.from("customer_products").select("product_id").eq("customer_id",currentUser.id)
@@ -580,6 +582,7 @@ window.loadShop=async function(){
    const btn=document.createElement("button");btn.type="button";btn.className="full kyc-action";
    btn.textContent=alreadyAdded?"Added":"Add +";
    btn.disabled=alreadyAdded||!isKycApproved;
+   btn.title=alreadyAdded?"This product is already added":(!isKycApproved?"KYC approval is required before adding products":"Add this product to My Products");
    if(alreadyAdded)btn.classList.add("gray");
    btn.onclick=(event)=>{event.stopPropagation();addProduct(p,btn)};
    card.append(title,cat,price,btn);box.appendChild(card);
