@@ -578,7 +578,7 @@ window.loadShop=async function(){
    const cat=document.createElement("p");cat.className="small";cat.textContent=p.category||"";
    const price=document.createElement("p");price.className="product-price";price.textContent=money(p.price);
    const btn=document.createElement("button");btn.className="full kyc-action";
-   btn.textContent=alreadyAdded?"Added":"Add to My Products";
+   btn.textContent=alreadyAdded?"Added":"Add +";
    btn.disabled=alreadyAdded||!isKycApproved;
    if(alreadyAdded)btn.classList.add("gray");
    btn.onclick=(event)=>{event.stopPropagation();addProduct(p,btn)};
@@ -606,7 +606,7 @@ async function addProduct(p,button){
   if(button){button.textContent="Added";button.classList.add("gray")}
   await loadMyProducts();await loadHomeData();
  }catch(err){
-  if(button){button.disabled=false;button.textContent="Add to My Products"}
+  if(button){button.disabled=false;button.textContent="Add +"}
   alert("Add product error: "+err.message)
  }
 }
