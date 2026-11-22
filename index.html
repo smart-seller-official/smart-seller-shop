@@ -390,6 +390,12 @@ button,input,select,textarea{font-size:14px}
 
  <section id="profilePage" class="page hidden">
   <div class="page-title"><h2>My Profile</h2><p class="muted">Your account and verification details.</p></div>
+  <div class="card" onclick="toggleProfileEdit()" style="cursor:pointer">
+   <div style="display:flex;align-items:center;gap:14px;margin-bottom:8px">
+    <img id="profileAvatar" src="" alt="Profile photo" style="width:76px;height:76px;border-radius:50%;object-fit:cover;background:#e6efff">
+    <div><strong id="profileName">-</strong><p class="muted" id="profileEmail">-</p><p class="muted">Phone: <span id="profilePhone">-</span></p><small class="muted">Tap Profile to edit</small></div>
+   </div>
+  </div>
   <div class="card score-box">
    <h3>Your Credit Score</h3>
    <svg class="credit-meter" viewBox="0 0 260 170" role="img" aria-label="Credit score speedometer from 0 to 100">
@@ -420,12 +426,6 @@ button,input,select,textarea{font-size:14px}
    </svg>
    <div class="score-number" id="profileCredit">-</div>
    <div class="success-note">✓ Your credit score is shown from your account profile.</div>
-  </div>
-  <div class="card" onclick="toggleProfileEdit()" style="cursor:pointer">
-   <div style="display:flex;align-items:center;gap:14px;margin-bottom:8px">
-    <img id="profileAvatar" src="" alt="Profile photo" style="width:76px;height:76px;border-radius:50%;object-fit:cover;background:#e6efff">
-    <div><strong id="profileName">-</strong><p class="muted" id="profileEmail">-</p><p class="muted">Phone: <span id="profilePhone">-</span></p><small class="muted">Tap Profile to edit</small></div>
-   </div>
   </div>
   <div id="profileEditCard" class="card hidden">
    <h3>Edit Profile</h3>
