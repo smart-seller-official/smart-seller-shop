@@ -671,6 +671,7 @@ async function loadHomeFeaturedProducts(){
  const box=$("homeFeaturedProducts");if(!box||!currentUser?.id)return;
  box.textContent="Loading products...";
  try{
+  await loadKyc(currentUser);
   const [productsResult,addedResult]=await Promise.all([
    db.from("products").select("id,name,description,price,category,image,image_url").eq("active",true).eq("is_active",true).order("created_at",{ascending:false}).limit(15),
    db.from("customer_products").select("product_id").eq("customer_id",currentUser.id)
