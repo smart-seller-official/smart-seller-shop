@@ -705,7 +705,7 @@ async function loadOrders(){
  visibleRows.map(x=>{
   const oi=visibleItems.filter(i=>String(i.order_id)===String(x.id)),itemTotal=oi.reduce((sum,i)=>sum+Number(i.unit_price||0)*Number(i.quantity||0),0),price=oi.length?itemTotal:Number(x.total_amount??x.product_price??0),profit=Number(x.admin_profit||0),balance=balanceByCustomer[String(x.customer_id)]||0;
   const itemText=oi.length?oi.map(i=>`<div><b>${esc(i.product_name||"Product")}</b><br>Quantity: ${esc(i.quantity)}<br>Unit Price: $${money(i.unit_price)}</div>`).join("<hr>"):"Product details unavailable",st=String(x.status||"").toLowerCase().trim();
-  return `<tr><td>${customerLink(x.customer_id)}<p><button onclick="openCustomerProfile('${esc(x.customer_id)}')">View Full Details</button></p></td><td><b>$${money(balance)}</b></td><td>${esc(x.id)}</td><td>${itemText}</td><td>$${money(price)}</td><td>$${money(profit)}</td><td><b>$${money(price+profit)}</b></td><td><b>${esc(x.status)}</b></td><td><select id="orderstatus_${esc(x.id)}">${statuses.map(([v,l])=>`<option value="${v}" ${st===v?"selected":""}>${l}</option>`).join("")}${!statuses.some(([v])=>v===st)?`<option value="${esc(st)}" selected>${esc(x.status)} (Old Status)</option>`:""}</select><button onclick="updateOrder('${esc(x.id)}')">Save</button></td></tr>`;
+  return `<tr><td>${customerLink(x.customer_id)}<p><button onclick="openCustomerProfile('${esc(x.customer_id)}')">View Full Details</button></p></td><td><b>$${money(balance)}</b></td><td>${esc(x.id)}</td><td>${itemText}</td><td>$${money(price)}</td><td>$${money(profit)}</td><td><b>$${money(price+profit)}</b></td><td><b>${esc(x.status)}</b></td><td><select id="orderstatus_${esc(x.id)}">${statuses.map(([v,l])=>`<option value="${v}" ${st===v?"selected":""}>${l}</option>`).join("")}${!statuses.some(([v])=>v===st)?`<option value="${esc(st)}" selected>${esc(x.status)} (Old Status)</option>`:""}</select><button type="button" onclick="window.updateOrder('${esc(x.id)}')">Save</button></td></tr>`;
  }).join("")+"</table></div>":"No orders found for this customer.";
 }
 async function updateOrder(id){
@@ -715,6 +715,7 @@ async function updateOrder(id){
  try{const r=await db.from("orders").update({status}).eq("id",id).select("*").single();if(r.error)throw r.error;if(status==="completed"){await creditCompletedOrder(id);note("Order completed. Wallet credit check ho gaya.")}else note("Order successfully "+status+" ho gaya.");if(current==="orders")await loadOrders()}
  catch(e){note("Order save error: "+e.message,true)}finally{const s=document.getElementById("orderstatus_"+id);if(s)s.disabled=false}
 }
+window.updateOrder=updateOrder;
 
 /* WALLET MANAGEMENT */
 async function walletPage(version=pageVersion){
