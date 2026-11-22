@@ -437,7 +437,7 @@ function initCustomerBadgeTracking(){
  ["orders","messages"].forEach(kind=>{const key=customerBadgeKey(kind);if(!localStorage.getItem(key))localStorage.setItem(key,new Date().toISOString())});
  refreshCustomerBadges();
  if(customerBadgeTimer)clearInterval(customerBadgeTimer);
- customerBadgeTimer=setInterval(refreshCustomerBadges,5000);
+ // Badge refresh is handled by the shared dashboard poll below.
 }
 async function markCustomerBadgeSeen(kind){
  if(!currentUser)return;
