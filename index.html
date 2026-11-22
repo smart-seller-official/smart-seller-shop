@@ -1024,6 +1024,8 @@ window.loadWithdrawalStatus=async function(){
    banner.textContent="Withdrawal Pending";banner.className="withdrawal-status-banner";
   }else if(status==="completed"&&data.approved_at&&Date.now()-new Date(data.approved_at).getTime()<24*60*60*1000){
    banner.textContent="Withdraw Complete Successful";banner.className="withdrawal-status-banner complete";
+   const remaining=24*60*60*1000-(Date.now()-new Date(data.approved_at).getTime());
+   window.setTimeout(()=>{banner.classList.add("hidden");banner.textContent="";},Math.max(0,remaining));
   }
  }catch(err){console.error("Withdrawal status:",err.message)}
 };
