@@ -1022,25 +1022,21 @@ function renderSupportCustomers(){
  if(!box)return;
  const groups=makeSupportGroups();
  const q=(document.getElementById("supportSearch")?.value||"").toLowerCase();
- const ids=Object.keys(groups).filter(id=>{
-  const msgs=groups[id]||[];
-  const unread=msgs.filter(m=>String(m.sender_role||m.sender||"").toLowerCase()==="customer"&&!m.read_at).length;
-  return unread>0&&(String(supportCustomerName(id))+" "+supportCustomerEmail(id)).toLowerCase().includes(q);
- });
+ const allIds=Array.from(new Set([...Object.keys(groups),...supportCustomers.map(c=>String(c.id))]));
+ const ids=allIds.filter(id=>(String(supportCustomerName(id))+" "+supportCustomerEmail(id)).toLowerCase().includes(q));
  box.innerHTML=ids.map(id=>{
-  const msgs=groups[id]||[];
-  const unread=msgs.filter(m=>String(m.sender_role||m.sender||"").toLowerCase()==="customer"&&!m.read_at).length;
-  const lastUnread=[...msgs].reverse().find(m=>String(m.sender_role||m.sender||"").toLowerCase()==="customer"&&!m.read_at);
+  const msgs=groups[id]||[],last=msgs[msgs.length-1];
   const name=supportCustomerName(id),email=supportCustomerEmail(id);
-  const summary=lastUnread?(unread+" unread · Latest: "+(lastUnread.message||"")):unread+" unread";
+  const unread=msgs.filter(m=>String(m.sender_role||m.sender||"").toLowerCase()==="customer"&&!m.read_at).length;
+  const summary=last?(msgs.length+" messages · Latest: "+(last.message||"")):"No messages yet";
   return `<div class="support-row">
    <b class="support-customer" title="${esc(name)}" onclick="openCustomerProfile('${esc(id)}')">${esc(name)}</b>
    <span class="support-email" title="${esc(email)}" onclick="openCustomerProfile('${esc(id)}')">${esc(email)}</span>
    <span class="support-summary">${esc(summary)}</span>
-   <span class="support-unread">${unread} unread</span>
+   ${unread?`<span class="support-unread">${unread} unread</span>`:`<span class="support-read">${msgs.length?"All read":"No messages"}</span>`}
    <button class="gray" onclick="openSupportChat('${esc(id)}')">Open Chat</button>
   </div>`;
- }).join("")||"No unread messages.";
+ }).join("")||"No customer accounts found.";
 }
 function filterSupportCustomers(){renderSupportCustomers();}
 async function refreshSupportMessages(force=false){
