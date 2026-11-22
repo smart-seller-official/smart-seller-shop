@@ -81,7 +81,7 @@ button.link{background:none;color:var(--blue);padding:5px;width:auto}
 hr{border:0;border-top:1px solid var(--border);margin:18px 0}
 .auth-wrap{max-width:430px;margin:35px auto}.auth-wrap .card{padding:22px}\n.login-help{border-top:1px solid var(--border);padding-top:8px;margin-top:12px}
 #profilePage{padding-bottom:20px}
-.kyc-lock-note{background:#fff7df;border:1px solid #f3d58a;color:#8a5b00;padding:13px;border-radius:12px;margin:10px 0 15px;font-size:13px;line-height:1.5}
+.kyc-upload-preview{display:block;max-width:100%;max-height:240px;object-fit:contain;border:1px solid var(--border);border-radius:10px;margin:8px 0 14px;background:#f8fafc}.kyc-upload-preview.hidden{display:none}#kycFrontWrap,#kycBackWrap{margin:12px 0}#kycForm label{display:block;margin:8px 0 5px}.kyc-lock-note{background:#fff7df;border:1px solid #f3d58a;color:#8a5b00;padding:13px;border-radius:12px;margin:10px 0 15px;font-size:13px;line-height:1.5}
 @media(min-width:600px){main{padding:22px}.product-image{height:230px}}
 .chat-screen{height:100dvh;display:flex;flex-direction:column;background:#f1f5f9;overflow:hidden}
 body.chat-open{padding:0;background:#f1f5f9}
@@ -341,7 +341,7 @@ button,input,select,textarea{font-size:14px}
     <p id="profileUpdateMessage" class="message"></p>
    </form>
   </div>
-  <div class="card"><h3>KYC Verification</h3><div id="verificationStatus" class="status pending">Checking KYC status...</div><div id="kycSection"><p class="muted">Please submit your identity document.</p><form id="kycForm"><select id="documentType" required><option value="">Select Document</option><option value="Passport">Passport</option><option value="National ID">National ID</option><option value="Driving Licence">Driving Licence</option></select><input id="kycFile" type="file" accept="image/*,.pdf" required><button class="full" id="kycButton">Submit KYC</button></form><p id="kycStatus" class="message"></p></div></div>
+  <div class="card"><h3>KYC Verification</h3><div id="verificationStatus" class="status pending">Checking KYC status...</div><div id="kycSection"><p class="muted">Please submit your identity document.</p><form id="kycForm"><select id="documentType" required><option value="">Select Document</option><option value="Passport">Passport (Front Side Only)</option><option value="National ID">National ID (Front + Back Side)</option><option value="Driving Licence">Driving Licence (Front + Back Side)</option></select><div id="kycFrontWrap"><label for="kycFile"><b>Front Side</b></label><input id="kycFile" type="file" accept="image/*" required><img id="kycFrontPreview" class="kyc-upload-preview hidden" alt="Front side preview"></div><div id="kycBackWrap" class="hidden"><label for="kycBackFile"><b>Back Side</b></label><input id="kycBackFile" type="file" accept="image/*"><img id="kycBackPreview" class="kyc-upload-preview hidden" alt="Back side preview"></div><button class="full" id="kycButton">Submit KYC</button></form><p id="kycStatus" class="message"></p></div></div>
   <button class="full gray" onclick="logout()">Logout</button>
  </section>
 </div>
@@ -1270,20 +1270,39 @@ async function loadKyc(user){
  }
 }
 
+function updateKycDocumentSides(){
+ const needsBack=["National ID","Driving Licence"].includes($("documentType").value);
+ $("kycBackWrap").classList.toggle("hidden",!needsBack);$("kycBackFile").required=needsBack;
+ if(!needsBack){$("kycBackFile").value="";$("kycBackPreview").removeAttribute("src");$("kycBackPreview").classList.add("hidden");}
+}
+function previewKycFile(input,preview){
+ const file=input.files?.[0];if(!file){preview.removeAttribute("src");preview.classList.add("hidden");return;}
+ if(!file.type.startsWith("image/")){input.value="";preview.removeAttribute("src");preview.classList.add("hidden");$("kycStatus").textContent="Please upload an image file.";return;}
+ preview.src=URL.createObjectURL(file);preview.classList.remove("hidden");
+}
+$("documentType").addEventListener("change",updateKycDocumentSides);
+$("kycFile").addEventListener("change",()=>previewKycFile($("kycFile"),$("kycFrontPreview")));
+$("kycBackFile").addEventListener("change",()=>previewKycFile($("kycBackFile"),$("kycBackPreview")));
+updateKycDocumentSides();
+
 $("kycForm").addEventListener("submit",async e=>{
  e.preventDefault();
  if(isKycApproved){$("kycStatus").textContent="Your KYC is already verified. Resubmission is disabled.";return;}
  if(isKycPending){$("kycStatus").textContent="Your KYC is already pending approval. Please wait.";return;}
  $("kycButton").disabled=true;$("kycStatus").textContent="Uploading document...";
  try{
-  const file=$("kycFile").files[0],type=$("documentType").value;
-  if(!file||!type)throw new Error("Select a document and file.");
-  if(file.size>5*1024*1024)throw new Error("File must be smaller than 5 MB.");
-  const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,"_");
-  const path=currentUser.id+"/"+Date.now()+"_"+safeName;
+  const file=$("kycFile").files[0],backFile=$("kycBackFile").files[0],type=$("documentType").value;
+  const needsBack=["National ID","Driving Licence"].includes(type);
+  if(!file||!type)throw new Error("Select the front side picture.");
+  if(needsBack&&!backFile)throw new Error("Please upload the back side picture too.");
+  if(!file.type.startsWith("image/")||(backFile&&!backFile.type.startsWith("image/")))throw new Error("Please upload image files only.");
+  if(file.size>5*1024*1024||(backFile&&backFile.size>5*1024*1024))throw new Error("Each picture must be smaller than 5 MB.");
+  const stamp=Date.now(),safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,"_"),path=currentUser.id+"/"+stamp+"_front_"+safeName;
   const {error:uploadError}=await db.storage.from("kyc-documents").upload(path,file);
   if(uploadError)throw uploadError;
-  const {error}=await db.from("kyc_submissions").insert({customer_id:currentUser.id,document_type:type,document_url:path,status:"Pending"});
+  let backPath=null;
+  if(needsBack){const backName=backFile.name.replace(/[^a-zA-Z0-9._-]/g,"_");backPath=currentUser.id+"/"+stamp+"_back_"+backName;const {error:backUploadError}=await db.storage.from("kyc-documents").upload(backPath,backFile);if(backUploadError)throw backUploadError;}
+  const {error}=await db.from("kyc_submissions").insert({customer_id:currentUser.id,document_type:type,document_url:path,document_back_url:backPath,status:"Pending"});
   if(error)throw error;
   $("kycForm").reset();
   isKycApproved=false;
