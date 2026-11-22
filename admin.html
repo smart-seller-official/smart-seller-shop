@@ -232,7 +232,7 @@ async function start(){
  document.getElementById("layout").style.display="flex";
  await go("dashboard",document.querySelector("aside button"));
  await refreshAdminBadges();
- if(!window.adminBadgeTimer)window.adminBadgeTimer=setInterval(()=>{refreshAdminBadges();if(current==="kyc_submissions")kycPage();if(current==="withdrawals")withdrawalsPage();if(current==="customers")customersPage();},5000);
+ if(!window.adminBadgeTimer)window.adminBadgeTimer=setInterval(()=>{refreshAdminBadges();if(current==="kyc_submissions")kycPage();if(current==="withdrawals")withdrawalsPage();if(current==="customers")customersPage();if(current==="customer_products"||current==="orders")refreshCustomerProducts();},5000);
 }
 async function check(){
  if(!db)return;
@@ -542,6 +542,17 @@ async function deleteProduct(id){
 }
 
 /* CUSTOMER PRODUCTS */
+async function refreshCustomerProducts(){
+ try{
+  const r=await db.from("customer_products").select("*").order("created_at",{ascending:false}).limit(2000);
+  if(r.error)throw r.error;
+  const rows=r.data||[],groups={};rows.forEach(p=>(groups[String(p.customer_id)]??=[]).push(p));
+  window.customerProductGroups=groups;
+  customerProductRows=rows.filter(x=>products.some(p=>String(p.id)===String(x.product_id)));
+  if(current==="customer_products")renderCP(Object.keys(groups));
+  if(current==="orders")renderOrderProductOptions();
+ }catch(e){console.warn("Customer products refresh failed:",e.message)}
+}
 async function customerProductsPage(version=pageVersion){
  await loadCustomers();if(!pageIs("customer_products",version))return;
  const r=await db.from("customer_products").select("*").limit(1000);
