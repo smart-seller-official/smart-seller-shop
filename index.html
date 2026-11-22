@@ -489,6 +489,30 @@ window.showProductTab=function(tab){
  if(mine)loadMyProducts();else loadShop();
 };
 
+function productImageList(value){
+ if(Array.isArray(value))return value.filter(Boolean).map(getProductImageUrl);
+ if(!value)return [];
+ const raw=String(value).trim();
+ if(raw.startsWith("[")){try{return JSON.parse(raw).filter(Boolean).map(getProductImageUrl)}catch(e){}}
+ const url=getProductImageUrl(raw);return url?[url]:[];
+}
+function openProductDetails(product){
+ const old=document.getElementById("productDetailsOverlay");if(old)old.remove();
+ const overlay=document.createElement("div");overlay.id="productDetailsOverlay";
+ Object.assign(overlay.style,{position:"fixed",inset:"0",background:"rgba(0,0,0,.65)",zIndex:"99999",display:"flex",alignItems:"center",justifyContent:"center",padding:"16px",overflowY:"auto"});
+ const panel=document.createElement("div");Object.assign(panel.style,{background:"#fff",borderRadius:"16px",padding:"16px",width:"100%",maxWidth:"520px",maxHeight:"90vh",overflowY:"auto",position:"relative"});
+ const close=document.createElement("button");close.textContent="✕ Close";close.className="full gray";close.onclick=()=>overlay.remove();panel.appendChild(close);
+ const title=document.createElement("h2");title.textContent=product.name||product.product_name||"Product Details";panel.appendChild(title);
+ const images=productImageList(product.image||product.image_url);
+ const gallery=document.createElement("div");Object.assign(gallery.style,{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:"8px",margin:"12px 0"});
+ images.forEach((url,index)=>{const img=document.createElement("img");img.src=url;img.alt="Product picture "+(index+1);Object.assign(img.style,{width:"100%",height:"150px",objectFit:"cover",borderRadius:"10px"});gallery.appendChild(img)});
+ if(images.length)panel.appendChild(gallery);
+ const category=document.createElement("p");category.textContent="Category: "+(product.category||"Not specified");panel.appendChild(category);
+ const price=document.createElement("p");price.className="product-price";price.textContent=money(product.price);panel.appendChild(price);
+ const description=document.createElement("p");description.textContent=product.description||"Product details";panel.appendChild(description);
+ overlay.addEventListener("click",e=>{if(e.target===overlay)overlay.remove()});
+ overlay.appendChild(panel);document.body.appendChild(overlay);
+}
 function getProductImageUrl(value){
  if(!value)return "";
  const raw=String(value).trim();
@@ -523,7 +547,7 @@ window.loadShop=async function(){
   box.innerHTML="";
   data.forEach(p=>{
    const alreadyAdded=addedIds.has(String(p.id));
-   const card=document.createElement("div");card.className="product-card";addProductImage(card,p.image);
+   const card=document.createElement("div");card.className="product-card";card.style.cursor="pointer";card.onclick=()=>openProductDetails(p);addProductImage(card,p.image);
    const title=document.createElement("h3");title.textContent=p.name||"Product";
    const cat=document.createElement("p");cat.className="small";cat.textContent=p.category||"";
    const price=document.createElement("p");price.className="product-price";price.textContent=money(p.price);
@@ -531,7 +555,7 @@ window.loadShop=async function(){
    btn.textContent=alreadyAdded?"Added":"Add to My Products";
    btn.disabled=alreadyAdded||!isKycApproved;
    if(alreadyAdded)btn.classList.add("gray");
-   btn.onclick=()=>addProduct(p,btn);
+   btn.onclick=(event)=>{event.stopPropagation();addProduct(p,btn)};
    card.append(title,cat,price,btn);box.appendChild(card);
   });
  }catch(err){box.textContent="Shop error: "+err.message}
@@ -569,7 +593,7 @@ window.loadMyProducts=async function(){
   if(!data?.length){box.textContent="You have not added any products yet.";return}
   box.innerHTML="";
   data.forEach(p=>{
-   const card=document.createElement("div");card.className="product-card";addProductImage(card,p.image||p.image_url);
+   const card=document.createElement("div");card.className="product-card";card.style.cursor="pointer";card.onclick=async()=>{let detail=p;if(p.product_id){const result=await db.from("products").select("*").eq("id",p.product_id).maybeSingle();if(!result.error&&result.data)detail=result.data;}openProductDetails(detail)};addProductImage(card,p.image||p.image_url);
    const title=document.createElement("h3");title.textContent=p.product_name||"Product";
    const cat=document.createElement("p");cat.className="small";cat.textContent=p.category||"";
    const price=document.createElement("p");price.className="product-price";price.textContent=money(p.price);
