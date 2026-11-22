@@ -421,17 +421,19 @@ async function loadDashboard(user){
  isKycApproved=false;
  initCustomerBadgeTracking();
  $("authArea").classList.add("hidden");
- // Keep the dashboard hidden until its saved-session data has finished loading.
+ // Show the dashboard after account details load; section data loads in the background.
  $("dashboard").classList.add("hidden");
  $("bottomNav").classList.add("hidden");
  $("welcome").textContent=user.user_metadata?.full_name||user.email||"Customer";
  await loadProfile();
  await loadKyc(user);
  updateKycLocks();
- // Select Home without starting a second, unawaited data request.
+ // Select Home without starting a duplicate data request.
  openPage("home",true);
- // Wait for Home and every customer section before showing the dashboard.
- await Promise.allSettled([
+ $("dashboard").classList.remove("hidden");
+ $("bottomNav").classList.remove("hidden");
+ // Load all customer data automatically without blocking the dashboard display.
+ Promise.allSettled([
   loadHomeData(),
   loadShop(),
   loadMyProducts(),
@@ -439,8 +441,6 @@ async function loadDashboard(user){
   loadWithdrawals(),
   loadSupport()
  ]);
- $("dashboard").classList.remove("hidden");
- $("bottomNav").classList.remove("hidden");
 }
 
 function customerBadgeKey(kind){return "smartSeller_"+kind+"_seen_"+currentUser.id}
