@@ -275,7 +275,7 @@ button,input,select,textarea{font-size:14px}
  <section id="supportPage" class="page hidden chat-screen">
   <div class="chat-topbar"><button type="button" class="chat-back" onclick="openPage('home')">‹</button><div><strong>Customer Service</strong><small>We are here to help</small></div><span class="chat-online"></span></div>
   <div id="supportList" class="chat-scroll"></div>
-  <form id="supportForm" class="chat-composer"><textarea id="supportInput" placeholder="Type a message..." rows="1" required></textarea><button id="supportButton" aria-label="Send message">➤</button></form>
+  <form id="supportForm" class="chat-composer"><textarea id="supportInput" placeholder="Type a message..." rows="1"></textarea><input id="supportImage" type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden><button type="button" class="gray" onclick="document.getElementById('supportImage').click()" aria-label="Attach image">📎</button><button id="supportButton" aria-label="Send message">➤</button></form>
   <p id="supportMessage" class="chat-feedback"></p>
  </section>
 
@@ -1193,50 +1193,20 @@ $("kycForm").addEventListener("submit",async e=>{
 /* CUSTOMER SUPPORT CHAT - NEW SEPARATE MESSAGES */
 window.loadSupport=async function(){
  if(!currentUser)return;
-
- const box=$("supportList");
- box.textContent="";
-
+ const box=$("supportList");box.textContent="";
  try{
-  const {data,error}=await db
-   .from("support_chat_messages")
-   .select("id,customer_id,sender,message,created_at")
-   .eq("customer_id",currentUser.id)
-   .order("created_at",{ascending:true});
-
-  if(error)throw error;
-
-  box.innerHTML="";
-
-  if(!data||data.length===0){
-   box.textContent="No messages yet. Send a message to Customer Service.";
-   return;
+  const {data,error}=await db.from("support_chat_messages").select("id,customer_id,sender,message,image_path,created_at").eq("customer_id",currentUser.id).order("created_at",{ascending:true});
+  if(error)throw error;box.innerHTML="";
+  if(!data||data.length===0){box.textContent="No messages yet. Send a message to Customer Service.";return;}
+  for(const m of data){
+   const item=document.createElement("div");item.className=(m.sender==="admin"?"chat-reply":"chat-message");
+   const who=document.createElement("strong");who.textContent=m.sender==="admin"?"Customer Service - Admin":"You";
+   const body=document.createElement("p");body.textContent=m.message||"";item.append(who,body);
+   if(m.image_path){const signed=await db.storage.from("support-chat-images").createSignedUrl(m.image_path,3600);if(signed.error)throw signed.error;const link=document.createElement("a");link.href=signed.data.signedUrl;link.target="_blank";link.rel="noopener";const img=document.createElement("img");img.src=signed.data.signedUrl;img.alt="Customer Service attachment";img.style.cssText="display:block;max-width:230px;max-height:230px;width:auto;height:auto;object-fit:contain;border-radius:10px;margin-top:7px";link.appendChild(img);item.appendChild(link);}
+   const time=document.createElement("small");time.className="chat-time";time.textContent=m.created_at?new Date(m.created_at).toLocaleString():"";item.appendChild(time);box.appendChild(item);
   }
-
-  data.forEach(m=>{
-   const item=document.createElement("div");
-   item.className=(m.sender==="admin"?"chat-reply":"chat-message");
-
-   const who=document.createElement("strong");
-   who.textContent=m.sender==="admin"?"Customer Service - Admin":"You";
-
-   const body=document.createElement("p");
-   body.textContent=m.message||"";
-
-   const time=document.createElement("small");
-   time.className="chat-time";
-   time.textContent=m.created_at?new Date(m.created_at).toLocaleString():"";
-
-   item.append(who,body,time);
-   box.appendChild(item);
-  });
-
   box.scrollTop=box.scrollHeight;
-
- }catch(err){
-  box.textContent="Customer Service error: "+err.message;
-  console.error("Support chat:",err);
- }
+ }catch(err){box.textContent="Customer Service error: "+err.message;console.error("Support chat:",err);}
 };
 
 $("supportForm").addEventListener("submit",async e=>{
@@ -1246,24 +1216,20 @@ $("supportForm").addEventListener("submit",async e=>{
  if(!requireKyc())return;
 
  const message=$("supportInput").value.trim();
- if(!message)return;
-
+ const imageFile=$("supportImage").files?.[0]||null;
+ if(!message&&!imageFile)return;
+ if(imageFile&&(!imageFile.type.startsWith("image/")||imageFile.size>5*1024*1024)){$("supportMessage").textContent="Image sirf JPG, PNG, WEBP ya GIF ho aur 5 MB se choti ho.";return;}
  $("supportButton").disabled=true;
  $("supportMessage").textContent="Sending message...";
 
  try{
-  const {error}=await db
-   .from("support_chat_messages")
-   .insert({
-    customer_id:currentUser.id,
-    sender:"customer",
-    sender_role:"customer",
-    message:message
-   });
+  let imagePath=null;
+  if(imageFile){const ext=(imageFile.name.split(".").pop()||"jpg").toLowerCase().replace(/[^a-z0-9]/g,"")||"jpg";imagePath=currentUser.id+"/"+(crypto.randomUUID?crypto.randomUUID():Date.now())+"."+ext;const uploaded=await db.storage.from("support-chat-images").upload(imagePath,imageFile,{contentType:imageFile.type,cacheControl:"3600",upsert:false});if(uploaded.error)throw uploaded.error;}
+  const {error}=await db.from("support_chat_messages").insert({customer_id:currentUser.id,sender:"customer",sender_role:"customer",message:message||"",image_path:imagePath});
 
   if(error)throw error;
 
-  $("supportInput").value="";
+  $("supportInput").value="";$("supportImage").value="";
   $("supportMessage").textContent="Message sent to Customer Service.";
 
   await loadSupport();
