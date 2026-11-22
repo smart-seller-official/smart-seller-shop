@@ -524,7 +524,7 @@ async function openDashboardOrders(){
   const activeStatuses=["pending","pickup","picked","picked_up","picked up","processing","shipping"];
   const customerIds=[...new Set((r.data||[]).filter(o=>activeStatuses.includes(String(o.status||"").trim().toLowerCase())).map(o=>String(o.customer_id||"")).filter(Boolean))];
   const rows=customerIds.map(id=>({id,customer:customers.find(c=>String(c.id)===id)}));
-  const html="<h2>Active Orders — Customers</h2><p class='muted'>Sirf un customers ki list hai jin ke orders abhi complete nahi hue.</p><button class='gray' onclick='dashboard()'>Back to Dashboard</button><div class='panel'>"+(rows.map(x=>"<div class='kyc-row'><span class='kyc-customer' onclick='openDashboardCustomerOrders(\""+esc(x.id)+"\")'>"+esc(x.customer?.full_name||x.customer?.email||x.id)+" — "+esc(x.customer?.email||"")+"</span><button class='gray' onclick='openDashboardCustomerOrders(\""+esc(x.id)+"\")'>Open Orders</button></div>").join("")||"No active orders found.")+"</div>";
+  const html="<h2>Active Orders — Customers</h2><p class='muted'>Sirf un customers ki list hai jin ke orders abhi complete nahi hue.</p><button class='gray' onclick='go("dashboard")'>Back to Dashboard</button><div class='panel'>"+(rows.map(x=>"<div class='kyc-row'><span class='kyc-customer' onclick='openDashboardCustomerOrders(\""+esc(x.id)+"\")'>"+esc(x.customer?.full_name||x.customer?.email||x.id)+" — "+esc(x.customer?.email||"")+"</span><button class='gray' onclick='openDashboardCustomerOrders(\""+esc(x.id)+"\")'>Open Orders</button></div>").join("")||"No active orders found.")+"</div>";
   putContent(html,"dashboard",pageVersion);
  }catch(e){note("Orders load error: "+e.message,true)}
 }
