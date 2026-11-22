@@ -1495,7 +1495,7 @@ function resetCustomerLanguageForNewLogin(userId){
  const key='smartSeller_language_login_user';
  if(localStorage.getItem(key)===userId)return;
  localStorage.setItem(key,userId);
- const current=(document.cookie.match(/(?:^|;\\s*)googtrans=([^;]+)/)||[])[1]||'';
+ const current=(document.cookie.match(/(?:^|;\s*)googtrans=([^;]+)/)||[])[1]||'';
  if(current&&decodeURIComponent(current)!=='/en/en'){
   document.cookie='googtrans=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
   document.cookie='googtrans=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain='+location.hostname;
