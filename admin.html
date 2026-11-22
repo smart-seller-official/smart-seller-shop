@@ -134,7 +134,7 @@ main{padding:12px}
 <button onclick="go('kyc_submissions',this)">✓ KYC <small id="adminKycBadge" class="admin-nav-count"></small></button>
 <button onclick="go('customers',this)">♙ Customer Accounts <small id="adminCustomersBadge" class="admin-nav-count"></small></button>
 <button onclick="go('support_messages',this)">✉ Customer Service <small id="adminMessagesBadge" class="admin-nav-count"></small></button>
-<button onclick="go('notifications',this)">♧ Notifications</button>
+<button onclick="go('notifications',this)">♧ Notifications <small id="adminNotificationsBadge" class="admin-nav-count"></small></button>
 <button onclick="go('credit_score_history',this)">◷ Credit Score History</button>
 </aside>
 <main>
@@ -222,9 +222,10 @@ async function refreshAdminBadges(){
    db.from("support_chat_messages").select("customer_id,sender,sender_role,created_at,read_at").order("created_at",{ascending:true}).limit(2000),
    db.from("kyc_submissions").select("id,status"),
    db.from("withdrawals").select("id,status"),
-   db.from("profiles").select("id")
+   db.from("profiles").select("id"),
+   db.from("admin_notifications").select("id",{count:"exact",head:true}).eq("is_read",false)
   ]);
-  if(results[0].error)throw results[0].error;if(results[1].error)throw results[1].error;if(results[2].error)throw results[2].error;if(results[3].error)throw results[3].error;if(results[4].error)throw results[4].error;
+  if(results[0].error)throw results[0].error;if(results[1].error)throw results[1].error;if(results[2].error)throw results[2].error;if(results[3].error)throw results[3].error;if(results[4].error)throw results[4].error;if(results[5].error)throw results[5].error;
   const pending=(results[0].data||[]).filter(o=>["pending","pickup","picked_up","picked up"].includes(String(o.status||"").toLowerCase())).length;
   const waiting=(results[1].data||[]).filter(m=>
    String(m.sender_role||m.sender||"").toLowerCase()==="customer"&&!m.read_at
@@ -236,12 +237,14 @@ async function refreshAdminBadges(){
   const seenCustomerIds=readSeenCustomerIds();
   const newCustomerCount=current==="customers"?0:customerRows.filter(c=>!seenCustomerIds.has(String(c.id))).length;
   if(current==="customers")saveSeenCustomerIds(customerRows.map(c=>c.id));
-  const ob=document.getElementById("adminOrdersBadge"),mb=document.getElementById("adminMessagesBadge"),kb=document.getElementById("adminKycBadge"),wb=document.getElementById("adminWithdrawalsBadge"),cb=document.getElementById("adminCustomersBadge");
+  const ob=document.getElementById("adminOrdersBadge"),mb=document.getElementById("adminMessagesBadge"),kb=document.getElementById("adminKycBadge"),wb=document.getElementById("adminWithdrawalsBadge"),cb=document.getElementById("adminCustomersBadge"),nb=document.getElementById("adminNotificationsBadge");
   if(ob)ob.textContent=pending?String(pending):"";
   if(mb){mb.textContent=waiting?String(waiting):"";mb.style.display=waiting?"inline-block":"none";}
   if(kb){kb.textContent=kycPending?String(kycPending):"";kb.style.display=kycPending?"inline-block":"none";}
   if(wb){wb.textContent=withdrawalsPending?String(withdrawalsPending):"";wb.style.display=withdrawalsPending?"inline-block":"none";}
   if(cb){cb.textContent=newCustomerCount?String(newCustomerCount):"";cb.style.display=newCustomerCount?"inline-block":"none";}
+  const unreadNotifications=Number(results[5].count||0);
+  if(nb){nb.textContent=unreadNotifications?String(unreadNotifications):"";nb.style.display=unreadNotifications?"inline-block":"none";}
  }catch(e){console.warn("Admin notification counts:",e.message)}
 }
 
@@ -254,7 +257,7 @@ async function start(){
  const savedButton=[...document.querySelectorAll("aside button")].find(b=>(b.getAttribute("onclick")||"").includes("'"+savedAdminPage+"'"));
  await go(savedAdminPage,savedButton||document.querySelector("aside button"));
  await refreshAdminBadges();
- if(!window.adminBadgeTimer)window.adminBadgeTimer=setInterval(()=>{refreshAdminBadges();if(current==="kyc_submissions")kycPage();if(current==="withdrawals")withdrawalsPage();if(current==="customers")customersPage();if(current==="customer_products"||current==="orders")refreshCustomerProducts();},5000);
+ if(!window.adminBadgeTimer)window.adminBadgeTimer=setInterval(()=>{refreshAdminBadges();if(current==="kyc_submissions")kycPage();if(current==="withdrawals")withdrawalsPage();if(current==="customers")customersPage();if(current==="customer_products"||current==="orders")refreshCustomerProducts();if(current==="notifications")notificationsPage();},5000);
 }
 async function check(){
  if(!db)return;
@@ -1111,9 +1114,32 @@ async function sendReply(){
 
 /* NOTIFICATIONS */
 async function notificationsPage(version=pageVersion){
- const r=await db.from("notifications").select("*").order("created_at",{ascending:false}).limit(300);
+ await loadCustomers();
+ const r=await db.from("admin_notifications").select("*").eq("is_read",false).order("created_at",{ascending:false}).limit(300);
  if(r.error)throw r.error;if(!pageIs("notifications",version))return;
- putContent(`<h2>Notifications</h2><p class="muted">Website notifications yahan show hongi.</p><button class="gray" onclick="notificationsPage()">Refresh</button><div class="panel">${renderCustomerLinkedTable(r.data||[])}</div>`,"notifications",version);
+ const rows=r.data||[];
+ const html=rows.length?rows.map(n=>{
+  const customer=n.customer_id?customerName(n.customer_id):"Customer";
+  const email=n.customer_id?customerEmail(n.customer_id):"";
+  const when=n.created_at?new Date(n.created_at).toLocaleString():"";
+  return `<div id="admin-notification-${esc(n.id)}" class="customer" onclick="openAdminNotification('${esc(n.id)}',this)">
+   <strong>${esc(n.title)}</strong><p style="margin:5px 0">${esc(n.message)}</p>
+   <div class="muted">${esc(customer)} ${email&&email!=="Email not available"?"— "+esc(email):""} · ${esc(when)}</div>
+   <small class="muted">Open to mark as read</small>
+  </div>`;
+ }).join(""):"<p class='muted'>No unread notifications.</p>";
+ putContent(`<h2>Notifications</h2><p class="muted">Unread notifications yahan rahengi. Open karte hi list se hat jayengi.</p><button class="gray" onclick="notificationsPage()">Refresh</button><div class="panel" id="adminNotificationsList">${html}</div>`,"notifications",version);
+}
+async function openAdminNotification(id,element){
+ if(!id)return;
+ const row=element||document.getElementById("admin-notification-"+id);
+ if(row)row.style.opacity=".5";
+ const r=await db.from("admin_notifications").update({is_read:true}).eq("id",id).eq("is_read",false);
+ if(r.error){if(row)row.style.opacity="1";note(r.error.message,true);return;}
+ if(row)row.remove();
+ const list=document.getElementById("adminNotificationsList");
+ if(list&&!list.querySelector(".customer"))list.innerHTML="<p class='muted'>No unread notifications.</p>";
+ await refreshAdminBadges();
 }
 
 /* CREDIT SCORE */
