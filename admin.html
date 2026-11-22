@@ -35,6 +35,14 @@ th{background:#f4f6fb}
 .error{color:#d33}.ok{color:#14866b}
 .customer{padding:12px;border:1px solid #e1e6ef;border-radius:8px;margin:7px 0;cursor:pointer}
 .customer:hover{background:#f3f5ff}
+.support-row{display:flex;align-items:center;gap:10px;flex-wrap:nowrap;white-space:nowrap;overflow-x:auto;background:#fff;padding:10px 12px;margin:0 0 6px;border:1px solid #e1e6ef;border-radius:8px;font-size:12px}
+.support-customer{flex:0 0 190px;min-width:130px;overflow:hidden;text-overflow:ellipsis;font-weight:700;color:#5145c5;cursor:pointer}
+.support-email{flex:0 0 210px;min-width:150px;overflow:hidden;text-overflow:ellipsis;color:#5145c5;cursor:pointer}
+.support-summary{flex:1 1 180px;min-width:100px;overflow:hidden;text-overflow:ellipsis;color:#77849a}
+.support-unread{flex:0 0 auto;background:#e5485d;color:white;border-radius:12px;padding:4px 8px;font-weight:700}
+.support-read{flex:0 0 auto;color:#159b79;font-weight:700}
+.support-row button{flex:0 0 auto;margin:0;padding:7px 10px}
+@media(max-width:760px){.support-customer{flex-basis:145px}.support-email{flex-basis:170px}}
 img.product{width:65px;height:65px;object-fit:cover;border-radius:7px}
 #toggle{display:none}
 .preview{width:100px;height:100px;object-fit:cover;border-radius:8px;display:none;margin:8px 0}
@@ -196,21 +204,16 @@ async function refreshAdminBadges(){
  try{
   const results=await Promise.all([
    db.from("orders").select("id,status"),
-   db.from("support_chat_messages").select("customer_id,sender,sender_role,created_at").order("created_at",{ascending:true}).limit(2000),
+   db.from("support_chat_messages").select("customer_id,sender,sender_role,created_at,read_at").order("created_at",{ascending:true}).limit(2000),
    db.from("kyc_submissions").select("id,status"),
    db.from("withdrawals").select("id,status"),
    db.from("profiles").select("id")
   ]);
   if(results[0].error)throw results[0].error;if(results[1].error)throw results[1].error;if(results[2].error)throw results[2].error;if(results[3].error)throw results[3].error;if(results[4].error)throw results[4].error;
   const pending=(results[0].data||[]).filter(o=>["pending","pickup","picked_up","picked up"].includes(String(o.status||"").toLowerCase())).length;
-  const waitingByCustomer=new Map();
-  (results[1].data||[]).forEach(m=>{
-   const id=String(m.customer_id||"");if(!id)return;
-   const role=String(m.sender_role||m.sender||"").toLowerCase();
-   if(role==="admin")waitingByCustomer.set(id,0);
-   else if(role==="customer")waitingByCustomer.set(id,(waitingByCustomer.get(id)||0)+1);
-  });
-  const waiting=[...waitingByCustomer.values()].reduce((sum,n)=>sum+n,0);
+  const waiting=(results[1].data||[]).filter(m=>
+   String(m.sender_role||m.sender||"").toLowerCase()==="customer"&&!m.read_at
+  ).length;
   const kycPending=(results[2].data||[]).filter(x=>String(x.status||"").trim().toLowerCase()==="pending").length;
   const withdrawalsPending=(results[3].data||[]).filter(x=>String(x.status||"").trim().toLowerCase()==="pending").length;
   const customerRows=results[4].data||[];
@@ -936,11 +939,12 @@ function renderSupportCustomers(){
  const ids=Object.keys(groups).filter(id=>(String(customerName(id))+" "+customerEmail(id)).toLowerCase().includes(q));
  box.innerHTML=ids.map(id=>{
   const msgs=groups[id],last=msgs[msgs.length-1];
-  const waiting=String(last.sender_role||last.sender||"").toLowerCase()!=="admin";
-  return `<div class="customer">
-   <b class="click-customer" onclick="openCustomerProfile('${esc(id)}')">${esc(customerName(id))}</b><br><span class="click-customer" onclick="openCustomerProfile('${esc(id)}')">${esc(customerEmail(id))}</span>
-   <p class="muted">${msgs.length} messages · Latest: ${esc(last.message||"")}</p>
-   <b>${waiting?"Waiting for admin reply":"Admin replied"}</b>
+  const unread=msgs.filter(m=>String(m.sender_role||m.sender||"").toLowerCase()==="customer"&&!m.read_at).length;
+  return `<div class="support-row">
+   <b class="support-customer" title="${esc(customerName(id))}" onclick="openCustomerProfile('${esc(id)}')">${esc(customerName(id))}</b>
+   <span class="support-email" title="${esc(customerEmail(id))}" onclick="openCustomerProfile('${esc(id)}')">${esc(customerEmail(id))}</span>
+   <span class="support-summary">${msgs.length} messages · Latest: ${esc(last.message||"")}</span>
+   ${unread?`<span class="support-unread">${unread} unread</span>`:`<span class="support-read">All read</span>`}
    <button class="gray" onclick="openSupportChat('${esc(id)}')">Open Chat</button>
   </div>`;
  }).join("")||"No customer messages.";
@@ -961,7 +965,7 @@ async function refreshSupportMessages(force=false){
  finally{supportRefreshing=false;refreshAdminBadges();}
 }
 function closeAdminSupportChat(){document.body.classList.remove("admin-chat-open");activeSupportCustomerId=null;supportPage();}
-function openSupportChat(customerId,preserveDraft=false){
+async function openSupportChat(customerId,preserveDraft=false){
  document.body.classList.add("admin-chat-open");
  const draft=document.getElementById("supportReply")?.value||"";
  activeSupportCustomerId=String(customerId);
@@ -978,9 +982,23 @@ function openSupportChat(customerId,preserveDraft=false){
   const role=String(m.sender_role||m.sender||"customer").toLowerCase();
   const admin=role==="admin";
   return `<div class="chat-bubble ${admin?"chat-admin":"chat-customer"}">
-   <div class="chat-meta">${admin?"Admin":"Customer"} · ${esc(m.created_at||"")}</div>
+   <div class="chat-meta">${admin?"Admin":"Customer"} · ${esc(m.created_at||"")}${!admin?(m.read_at?" · Read":" · Unread"):""}</div>
    <p>${esc(m.message||"")}</p></div>`;
  }).join("")||"No messages.";
+ const unreadIds=messages.filter(m=>String(m.sender_role||m.sender||"").toLowerCase()==="customer"&&!m.read_at).map(m=>m.id).filter(Boolean);
+ if(unreadIds.length){
+  try{
+   const readTime=new Date().toISOString();
+   const marked=await db.from("support_chat_messages").update({read_at:readTime}).in("id",unreadIds).select("id,read_at");
+   if(marked.error)throw marked.error;
+   const readIds=new Set((marked.data||[]).map(m=>String(m.id)));
+   supportMessages=supportMessages.map(m=>readIds.has(String(m.id))?{...m,read_at:readTime}:m);
+   supportLastSignature=JSON.stringify(supportMessages);
+   makeSupportGroups();
+   renderSupportCustomers();
+   await refreshAdminBadges();
+  }catch(e){note("Read status update error: "+e.message,true);}
+ }
 }
 async function sendReply(){
  const customerId=activeSupportCustomerId;
