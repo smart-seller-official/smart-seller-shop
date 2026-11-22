@@ -76,7 +76,8 @@ button.link{background:none;color:var(--blue);padding:5px;width:auto}
 .success-note{background:#dcfce7;color:#166534;border-radius:10px;padding:12px;font-size:13px;text-align:left}
 .bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:50;background:white;border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(5,1fr);padding:7px 3px calc(7px + env(safe-area-inset-bottom));box-shadow:0 -4px 18px #15284b12}
 .bottom-nav button{position:relative;background:transparent;color:#748198;margin:0;padding:6px 1px;border-radius:8px;font-size:11px}
-.bottom-nav button.active{color:var(--blue);background:#eef2ff}.bottom-nav span{display:block;font-size:21px;margin-bottom:4px}.nav-count{position:absolute;top:0;right:calc(50% - 24px);display:flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 5px;border:2px solid #fff;border-radius:50%;background:#e11d48;color:#fff;font-size:10px;line-height:1;font-weight:800;box-shadow:0 1px 4px #0003;z-index:2}
+.bottom-nav button.active{color:var(--blue);background:#eef2ff}.bottom-nav span{display:block;font-size:21px;margin-bottom:4px}#bottomNav .profile-nav-avatar{width:23px;height:23px;border-radius:50%;object-fit:cover;display:block;margin:0 auto 2px;border:1.5px solid #d8b66b;background:#fff}
+.nav-count{position:absolute;top:0;right:calc(50% - 24px);display:flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 5px;border:2px solid #fff;border-radius:50%;background:#e11d48;color:#fff;font-size:10px;line-height:1;font-weight:800;box-shadow:0 1px 4px #0003;z-index:2}
 .message{text-align:center;color:#078b70;font-size:13px;overflow-wrap:anywhere}
 .chat-message,.chat-reply{padding:12px;border-radius:11px;margin:10px 0;overflow-wrap:anywhere}
 .chat-message{background:#eff6ff}.chat-reply{background:#dcfce7}
@@ -412,7 +413,7 @@ button,input,select,textarea{font-size:14px}
  <button data-page="products" onclick="openPage('products')"><span>▣</span>Products</button>
  <button data-page="orders" onclick="openPage('orders')"><span>🛒</span>Orders<small id="customerOrdersBadge" class="nav-count hidden"></small></button>
  <button data-page="wallet" onclick="openPage('wallet')"><span>▰</span>Wallet</button>
- <button data-page="profile" onclick="openPage('profile')"><span>👤</span>Profile</button>
+ <button data-page="profile" onclick="openPage('profile')"><span><img id="bottomProfileAvatar" class="profile-nav-avatar" src="" alt="Profile"></span>Profile</button>
 </nav>
 
 <script>
@@ -1204,6 +1205,7 @@ async function loadProfile(){
  }catch(err){console.error("Profile load:",err.message)}
  const fallback="data:image/svg+xml,"+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100%" height="100%" fill="#dbeafe"/><text x="50%" y="57%" text-anchor="middle" font-size="48">👤</text></svg>');
  $("profileAvatar").src=avatarUrl||fallback;
+ $("bottomProfileAvatar").src=avatarUrl||fallback;
  if($("welcomeAvatar"))$("welcomeAvatar").src=avatarUrl||fallback;
  if($("welcome"))$("welcome").textContent=$("profileName").textContent||currentUser.email||"Customer";
 }
@@ -1211,7 +1213,7 @@ async function loadProfile(){
 
 $("profilePhoto").addEventListener("change",()=>{
  const file=$("profilePhoto").files[0];
- if(file){if(!file.type.startsWith("image/")){msg("Please choose an image.");return} $("profileAvatar").src=URL.createObjectURL(file);}
+ if(file){if(!file.type.startsWith("image/")){msg("Please choose an image.");return} const previewUrl=URL.createObjectURL(file);$("profileAvatar").src=previewUrl;$("bottomProfileAvatar").src=previewUrl;}
 });
 $("profileUpdateForm").addEventListener("submit",async e=>{
  e.preventDefault();
@@ -1236,7 +1238,7 @@ $("profileUpdateForm").addEventListener("submit",async e=>{
   const {error:authError}=await db.auth.updateUser({data:{full_name:fullName,phone:phone}});
   if(authError)console.warn("Auth profile metadata:",authError.message);
   if($("profileName"))$("profileName").textContent=fullName;if($("profilePhone"))$("profilePhone").textContent=phone||"-";
-  if($("welcome"))$("welcome").textContent=fullName;if($("profileAvatar"))$("profileAvatar").src=avatarUrl;if($("welcomeAvatar"))$("welcomeAvatar").src=avatarUrl;
+  if($("welcome"))$("welcome").textContent=fullName;if($("profileAvatar"))$("profileAvatar").src=avatarUrl;if($("bottomProfileAvatar"))$("bottomProfileAvatar").src=avatarUrl;if($("welcomeAvatar"))$("welcomeAvatar").src=avatarUrl;
   $("profilePhoto").value="";note.textContent="Profile updated successfully.";
  }catch(err){note.textContent="Profile update error: "+err.message}
  button.disabled=false;
