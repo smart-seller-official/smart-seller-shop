@@ -71,13 +71,16 @@ button.link{background:none;color:var(--blue);padding:5px;width:auto}
 .order-card .order-step{min-width:0;padding:5px 2px;font-size:9px;font-weight:900;letter-spacing:.2px}
 .order-card button{padding:6px 9px;font-size:11px;margin-top:4px}
 .score-box{text-align:center}.score-number{font-size:36px;font-weight:800;margin:2px 8px 8px;color:#172554}
-.credit-meter{width:min(100%,310px);height:auto;display:block;margin:8px auto 0;overflow:visible}
-.credit-meter-track{fill:none;stroke:#e8edf5;stroke-width:15;stroke-linecap:round}
-.credit-meter-arc{fill:none;stroke:url(#creditMeterGradient);stroke-width:15;stroke-linecap:round}
-.credit-meter-needle{transform-origin:120px 120px;transition:transform .75s cubic-bezier(.2,.8,.2,1)}
-.credit-meter-needle line{stroke:#172554;stroke-width:5;stroke-linecap:round}
+.credit-meter{width:min(100%,340px);height:auto;display:block;margin:4px auto 0;overflow:visible}
+.credit-meter-track{fill:none;stroke:#e8edf5;stroke-width:17;stroke-linecap:round}
+.credit-meter-arc{fill:none;stroke:url(#creditMeterGradient);stroke-width:13;stroke-linecap:round}
+.credit-meter-ticks{fill:none;stroke:#475569;stroke-width:2.4;stroke-linecap:round}
+.credit-meter-minor-ticks{fill:none;stroke:#94a3b8;stroke-width:1.4;stroke-linecap:round}
+.credit-meter-needle{transform-origin:130px 132px;transition:transform .85s cubic-bezier(.2,.8,.2,1)}
+.credit-meter-needle path{fill:#172554;stroke:#fff;stroke-width:1}
 .credit-meter-needle circle{fill:#172554;stroke:#fff;stroke-width:3}
-.credit-meter-labels{font-size:11px;font-weight:700;fill:#64748b}
+.credit-meter-needle .credit-meter-hub{fill:#f8fafc;stroke:#172554;stroke-width:2}
+.credit-meter-labels{font-size:11px;font-weight:800;fill:#475569}
 .score-track{height:12px;background:#e5eaf3;border-radius:20px;overflow:hidden;margin:15px 0}
 .score-fill{height:100%;background:linear-gradient(90deg,#22c55e,#eab308);border-radius:20px}
 .success-note{background:#dcfce7;color:#166534;border-radius:10px;padding:12px;font-size:13px;text-align:left}
@@ -387,15 +390,25 @@ button,input,select,textarea{font-size:14px}
   <div class="page-title"><h2>My Profile</h2><p class="muted">Your account and verification details.</p></div>
   <div class="card score-box">
    <h3>Your Credit Score</h3>
-   <svg class="credit-meter" viewBox="0 0 240 145" role="img" aria-label="Credit score meter from 0 to 100">
-    <defs><linearGradient id="creditMeterGradient" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#ef4444"/><stop offset="48%" stop-color="#f59e0b"/><stop offset="100%" stop-color="#16a34a"/></linearGradient></defs>
-    <path class="credit-meter-track" d="M20 120 A100 100 0 0 1 220 120"/>
-    <path class="credit-meter-arc" d="M20 120 A100 100 0 0 1 220 120"/>
-    <g id="profileCreditNeedle" class="credit-meter-needle" style="transform:rotate(-90deg)">
-     <line x1="120" y1="120" x2="120" y2="35"/>
-     <circle cx="120" cy="120" r="8"/>
+   <svg class="credit-meter" viewBox="0 0 260 170" role="img" aria-label="Credit score speedometer from 0 to 100">
+    <defs>
+     <linearGradient id="creditMeterGradient" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#dc2626"/><stop offset="48%" stop-color="#f59e0b"/><stop offset="100%" stop-color="#16a34a"/></linearGradient>
+     <filter id="creditMeterShadow" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#0f172a" flood-opacity=".22"/></filter>
+    </defs>
+    <path class="credit-meter-track" d="M30 132 A100 100 0 0 1 230 132"/>
+    <path class="credit-meter-arc" d="M30 132 A100 100 0 0 1 230 132"/>
+    <g class="credit-meter-ticks">
+     <path d="M30 132 L42 132 M39.8 101.1 L50.2 104.9 M58.2 73.2 L67.4 78.6 M85.2 51.1 L92.2 59.5 M116.1 33.5 L118.2 45.3 M143.9 33.5 L141.8 45.3 M174.8 51.1 L167.8 59.5 M201.8 73.2 L192.6 78.6 M220.2 101.1 L209.8 104.9 M230 132 L218 132"/>
     </g>
-    <g class="credit-meter-labels"><text x="13" y="139">0</text><text x="120" y="13" text-anchor="middle">50</text><text x="227" y="139" text-anchor="end">100</text></g>
+    <g class="credit-meter-minor-ticks">
+     <path d="M34.9 110.2 L41.8 112.7 M47.7 86.4 L53.8 90 M70.9 61.5 L75.8 66.9 M101.8 41.4 L104.3 48.3 M130 32 L130 40 M158.2 41.4 L155.7 48.3 M189.1 61.5 L184.2 66.9 M212.3 86.4 L206.2 90 M225.1 110.2 L218.2 112.7"/>
+    </g>
+    <g id="profileCreditNeedle" class="credit-meter-needle" style="transform:rotate(-90deg)" filter="url(#creditMeterShadow)">
+     <path d="M130 132 L124.5 132 L130 54 L135.5 132 Z"/>
+     <circle cx="130" cy="132" r="10"/>
+     <circle class="credit-meter-hub" cx="130" cy="132" r="4"/>
+    </g>
+    <g class="credit-meter-labels"><text x="20" y="153">0</text><text x="130" y="22" text-anchor="middle">50</text><text x="240" y="153" text-anchor="end">100</text></g>
    </svg>
    <div class="score-number" id="profileCredit">-</div>
    <div class="success-note">✓ Your credit score is shown from your account profile.</div>
