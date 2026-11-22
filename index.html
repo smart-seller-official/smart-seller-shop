@@ -419,49 +419,26 @@ $("newPasswordForm").addEventListener("submit",async e=>{
 async function loadDashboard(user){
  currentUser=user;
  isKycApproved=false;
- // Do not show fake zero values while the saved customer data is loading.
  ["homeBalance","homeOrders","homeProducts","homeProfit","walletBalance","walletProfit","walletApplied"].forEach(id=>{const el=$(id);if(el)el.textContent="Loading...";});
  $("authArea").classList.add("hidden");
  $("dashboard").classList.remove("hidden");
  $("bottomNav").classList.remove("hidden");
  $("welcome").textContent=user.user_metadata?.full_name||user.email||"Customer";
- // Restore the last customer page after refresh; default to Home on first visit.
  const savedPage=localStorage.getItem("smartSeller_lastPage_"+user.id);
  const allowedPages=["home","products","orders","wallet","support","profile"];
  const initialPage=allowedPages.includes(savedPage)?savedPage:"home";
- openPage(initialPage,true);
  initCustomerBadgeTracking();
- // Load account and dashboard sections independently so one slow request cannot
- // leave the customer with only the header visible.
- const tasks=[
+ // Load only account identity and KYC first. Then load the page the customer
+ // is actually opening through openPage, avoiding eight competing page requests.
+ const accountResults=await Promise.allSettled([
   loadProfile(),
-  loadKyc(user).then(()=>updateKycLocks()),
-  loadHomeData(),
-  loadShop(),
-  loadMyProducts(),
-  loadOrders(),
-  loadWithdrawals(),
-  loadSupport()
- ];
- // Schedule the independent dashboard retry immediately. Do not wait for
- // every other page (shop, support, KYC, etc.) to finish before scheduling it.
- setTimeout(async()=>{
-  if(!currentUser||currentUser.id!==user.id)return;
-  await Promise.allSettled([
-   loadProfile(),
-   loadKyc(user).then(()=>updateKycLocks()),
-   loadHomeData(),
-   loadShop(),
-   loadMyProducts(),
-   loadOrders(),
-   loadWithdrawals(),
-   loadSupport()
-  ]);
- },5000);
- const results=await Promise.allSettled(tasks);
- results.forEach((result,index)=>{
-  if(result.status==="rejected")console.error("Customer data load failed ("+index+"):",result.reason);
+  loadKyc(user).then(()=>updateKycLocks())
+ ]);
+ if(!currentUser||currentUser.id!==user.id)return;
+ accountResults.forEach((result,index)=>{
+  if(result.status==="rejected")console.error("Customer account load failed ("+index+"):",result.reason);
  });
+ openPage(initialPage,false);
 }
 
 function customerBadgeKey(kind){return "smartSeller_"+kind+"_seen_"+currentUser.id}
