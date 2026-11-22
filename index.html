@@ -1078,19 +1078,19 @@ window.loadWithdrawalStatus=async function(){
  const banner=$("withdrawalStatusBanner");if(!banner||!currentUser)return;
  banner.className="withdrawal-status-banner hidden";banner.textContent="";
  try{
-  const {data,error}=await db.from("withdrawals").select("id,status,created_at,approved_at").eq("customer_id",currentUser.id).in("status",["pending","completed","approved","rejected"]).order("created_at",{ascending:false}).limit(1).maybeSingle();
+  const {data,error}=await db.from("withdrawals").select("id,status,amount,created_at,approved_at").eq("customer_id",currentUser.id).in("status",["pending","completed","approved","rejected"]).order("created_at",{ascending:false}).limit(1).maybeSingle();
   if(error)throw error;
   if(!data)return;
   const status=String(data.status||"").trim().toLowerCase();
   if(status==="pending"){
    banner.textContent="Withdrawal Pending";banner.className="withdrawal-status-banner";
   }else if(status==="rejected"){
-   banner.textContent="Your withdraw is rejected please contect with customer service";banner.className="withdrawal-status-banner rejected";
+   banner.textContent="Withdraw is Rejected Please Contect With Customer Service — $"+Number(data.amount||0).toFixed(2);banner.className="withdrawal-status-banner rejected";
   }else if(["completed","approved"].includes(status)){
    const approvedTime=data.approved_at||data.created_at;
    const elapsed=Date.now()-new Date(approvedTime).getTime();
    if(!approvedTime||!Number.isFinite(elapsed)||elapsed>=24*60*60*1000)return;
-   banner.textContent="Withdraw Complete Successful";banner.className="withdrawal-status-banner complete";
+   banner.textContent="Withdraw Complete Successful — $"+Number(data.amount||0).toFixed(2);banner.className="withdrawal-status-banner complete";
    const remaining=24*60*60*1000-elapsed;
    window.setTimeout(()=>{banner.classList.add("hidden");banner.textContent="";},Math.max(0,remaining));
   }
