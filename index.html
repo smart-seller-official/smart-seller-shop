@@ -423,8 +423,11 @@ async function loadDashboard(user){
  $("dashboard").classList.remove("hidden");
  $("bottomNav").classList.remove("hidden");
  $("welcome").textContent=user.user_metadata?.full_name||user.email||"Customer";
- // Never keep the entire customer panel hidden while a database request is pending.
- openPage("home",true);
+ // Restore the last customer page after refresh; default to Home on first visit.
+ const savedPage=localStorage.getItem("smartSeller_lastPage_"+user.id);
+ const allowedPages=["home","products","orders","wallet","support","profile"];
+ const initialPage=allowedPages.includes(savedPage)?savedPage:"home";
+ openPage(initialPage,true);
  initCustomerBadgeTracking();
  // Load account and dashboard sections independently so one slow request cannot
  // leave the customer with only the header visible.
@@ -483,6 +486,9 @@ async function refreshCustomerBadges(){
 }
 
 window.openPage=function(page,skipDataLoad=false){
+ if(currentUser&&["home","products","orders","wallet","support","profile"].includes(page)){
+  localStorage.setItem("smartSeller_lastPage_"+currentUser.id,page);
+ }
  document.body.classList.toggle("chat-open",page==="support");
  ["home","products","orders","wallet","support","profile"].forEach(p=>$(p+"Page").classList.toggle("hidden",p!==page));
  document.querySelectorAll(".bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===page));
