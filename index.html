@@ -419,7 +419,6 @@ $("newPasswordForm").addEventListener("submit",async e=>{
 async function loadDashboard(user){
  currentUser=user;
  isKycApproved=false;
- ["homeBalance","homeOrders","homeProducts","homeProfit","walletBalance","walletProfit","walletApplied"].forEach(id=>{const el=$(id);if(el)el.textContent="";});
  $("authArea").classList.add("hidden");
  $("dashboard").classList.remove("hidden");
  $("bottomNav").classList.remove("hidden");
@@ -428,17 +427,18 @@ async function loadDashboard(user){
  const allowedPages=["home","products","orders","wallet","support","profile"];
  const initialPage=allowedPages.includes(savedPage)?savedPage:"home";
  initCustomerBadgeTracking();
- // Load only account identity and KYC first. Then load the page the customer
- // is actually opening through openPage, avoiding eight competing page requests.
- const accountResults=await Promise.allSettled([
+ // Show the selected page immediately and start its data request without
+ // waiting for profile/KYC requests. Account details load alongside it.
+ openPage(initialPage,false);
+ Promise.allSettled([
   loadProfile(),
   loadKyc(user).then(()=>updateKycLocks())
- ]);
- if(!currentUser||currentUser.id!==user.id)return;
- accountResults.forEach((result,index)=>{
-  if(result.status==="rejected")console.error("Customer account load failed ("+index+"):",result.reason);
+ ]).then(results=>{
+  if(!currentUser||currentUser.id!==user.id)return;
+  results.forEach((result,index)=>{
+   if(result.status==="rejected")console.error("Customer account load failed ("+index+"):",result.reason);
+  });
  });
- openPage(initialPage,false);
 }
 
 function customerBadgeKey(kind){return "smartSeller_"+kind+"_seen_"+currentUser.id}
