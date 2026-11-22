@@ -264,9 +264,12 @@ async function loadCustomers(){
  });
  customers=unique;
 }
+let totalProductCount=0;
 async function loadProducts(){
- const r=await db.from("products").select("*").limit(1000);
- if(r.error)throw r.error;products=r.data||[];
+ const r=await db.from("products").select("*",{count:"exact"}).limit(1000);
+ if(r.error)throw r.error;
+ products=r.data||[];
+ totalProductCount=Number.isFinite(r.count)?r.count:products.length;
 }
 function customerName(id){
  const c=customers.find(x=>String(x.id)===String(id));
@@ -501,7 +504,9 @@ function previewProductImage(){
 async function productPage(version=pageVersion){
  await loadProducts();if(!pageIs("products",version))return;
  putContent(`
- <h2>Products</h2><div class="panel"><h3>Create Product</h3>
+ <h2>Products</h2>
+ <div class="stat" style="margin-bottom:14px"><span>Total Products Added</span><strong id="productTotalCount">0</strong></div>
+ <div class="panel"><h3>Create Product</h3>
  <label>Product Name</label><input id="pname">
  <label>Price</label><input id="pprice" type="number" step="0.01" min="0">
  <label>Category</label><input id="pcat">
@@ -513,6 +518,8 @@ async function productPage(version=pageVersion){
  renderProducts();
 }
 function renderProducts(){
+ const count=document.getElementById("productTotalCount");
+ if(count)count.textContent=String(totalProductCount);
  const target=document.getElementById("productList");if(!target||!target.isConnected)return;
  target.innerHTML="<div class='tablewrap'><table><tr><th>Pictures</th><th>Name</th><th>Price</th><th>Category</th><th>Actions</th></tr>"+
  products.map(p=>{const pics=productImages(p);return `<tr><td>${pics.length?pics.map(src=>`<img class="product" style="margin:2px" src="${esc(src)}">`).join(""):"-"}</td><td>${esc(p.name)}</td><td>${esc(p.price)}</td><td>${esc(p.category)}</td><td><button onclick="editProduct('${esc(p.id)}')">Edit</button><button class="red" onclick="deleteProduct('${esc(p.id)}')">Delete</button></td></tr>`}).join("")+"</table></div>";
