@@ -906,10 +906,23 @@ let supportRefreshTimer = null;
 let supportRefreshing = false;
 let sendingReplyIds = new Set();
 let supportLastSignature = "";
+let supportCustomers = [];
+
+function supportCustomerName(id){
+ const customer=supportCustomers.find(c=>String(c.id)===String(id));
+ return customer?.full_name||customer?.email||customerName(id);
+}
+function supportCustomerEmail(id){
+ const customer=supportCustomers.find(c=>String(c.id)===String(id));
+ return customer?.email||customerEmail(id);
+}
 
 async function supportPage(version=pageVersion){
  await loadCustomers();
  if(!pageIs("support_messages",version))return;
+ const customerResult=await db.from("profiles").select("id,full_name,email").order("created_at",{ascending:true}).limit(1000);
+ if(customerResult.error)throw customerResult.error;
+ supportCustomers=customerResult.data||[];
  const r=await db.from("support_chat_messages").select("*").order("created_at",{ascending:true}).limit(1000);
  if(r.error)throw r.error;
  if(!pageIs("support_messages",version))return;
@@ -936,18 +949,21 @@ function renderSupportCustomers(){
  if(!box)return;
  const groups=makeSupportGroups();
  const q=(document.getElementById("supportSearch")?.value||"").toLowerCase();
- const ids=Object.keys(groups).filter(id=>(String(customerName(id))+" "+customerEmail(id)).toLowerCase().includes(q));
+ const allIds=Array.from(new Set([...Object.keys(groups),...supportCustomers.map(c=>String(c.id))]));
+ const ids=allIds.filter(id=>(String(supportCustomerName(id))+" "+supportCustomerEmail(id)).toLowerCase().includes(q));
  box.innerHTML=ids.map(id=>{
-  const msgs=groups[id],last=msgs[msgs.length-1];
+  const msgs=groups[id]||[],last=msgs[msgs.length-1];
+  const name=supportCustomerName(id),email=supportCustomerEmail(id);
   const unread=msgs.filter(m=>String(m.sender_role||m.sender||"").toLowerCase()==="customer"&&!m.read_at).length;
+  const summary=last?(msgs.length+" messages · Latest: "+(last.message||"")):"No messages yet";
   return `<div class="support-row">
-   <b class="support-customer" title="${esc(customerName(id))}" onclick="openCustomerProfile('${esc(id)}')">${esc(customerName(id))}</b>
-   <span class="support-email" title="${esc(customerEmail(id))}" onclick="openCustomerProfile('${esc(id)}')">${esc(customerEmail(id))}</span>
-   <span class="support-summary">${msgs.length} messages · Latest: ${esc(last.message||"")}</span>
-   ${unread?`<span class="support-unread">${unread} unread</span>`:`<span class="support-read">All read</span>`}
+   <b class="support-customer" title="${esc(name)}" onclick="openCustomerProfile('${esc(id)}')">${esc(name)}</b>
+   <span class="support-email" title="${esc(email)}" onclick="openCustomerProfile('${esc(id)}')">${esc(email)}</span>
+   <span class="support-summary">${esc(summary)}</span>
+   ${unread?`<span class="support-unread">${unread} unread</span>`:`<span class="support-read">${msgs.length?"All read":"No messages"}</span>`}
    <button class="gray" onclick="openSupportChat('${esc(id)}')">Open Chat</button>
   </div>`;
- }).join("")||"No customer messages.";
+ }).join("")||"No customer accounts found.";
 }
 function filterSupportCustomers(){renderSupportCustomers();}
 async function refreshSupportMessages(force=false){
@@ -972,7 +988,7 @@ async function openSupportChat(customerId,preserveDraft=false){
  const messages=window.supportGroups?.[activeSupportCustomerId]||[];
  document.body.classList.add("admin-chat-open");
  putContent(`<section class="admin-chat-screen">
-  <div class="admin-chat-topbar"><button type="button" class="admin-chat-back" onclick="closeAdminSupportChat()">‹</button><div><strong>${esc(customerName(customerId))}</strong><small>${esc(customerEmail(customerId))}</small></div><span class="admin-chat-online"></span></div>
+  <div class="admin-chat-topbar"><button type="button" class="admin-chat-back" onclick="closeAdminSupportChat()">‹</button><div><strong>${esc(supportCustomerName(customerId))}</strong><small>${esc(supportCustomerEmail(customerId))}</small></div><span class="admin-chat-online"></span></div>
   <div id="supportChatMessages" class="admin-chat-messages"></div>
   <div class="admin-chat-compose"><textarea id="supportReply" placeholder="Type a message..." rows="1">${preserveDraft?esc(draft):""}</textarea><button class="green" id="sendSupportReply" onclick="sendReply()" aria-label="Send message">➤</button></div>
  </section>`,"support_messages",pageVersion);
