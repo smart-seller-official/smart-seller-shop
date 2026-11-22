@@ -1134,12 +1134,35 @@ async function openAdminNotification(id,element){
  if(!id)return;
  const row=element||document.getElementById("admin-notification-"+id);
  if(row)row.style.opacity=".5";
+ const notification=await db.from("admin_notifications").select("id,customer_id,source_table").eq("id",id).maybeSingle();
+ if(notification.error){if(row)row.style.opacity="1";note(notification.error.message,true);return;}
+ if(!notification.data)return;
  const r=await db.from("admin_notifications").update({is_read:true}).eq("id",id).eq("is_read",false);
  if(r.error){if(row)row.style.opacity="1";note(r.error.message,true);return;}
  if(row)row.remove();
  const list=document.getElementById("adminNotificationsList");
  if(list&&!list.querySelector(".customer"))list.innerHTML="<p class='muted'>No unread notifications.</p>";
  await refreshAdminBadges();
+
+ const source=String(notification.data.source_table||"");
+ const destinations={
+  profiles:"customers",
+  support_chat_messages:"support_messages",
+  support_messages:"support_messages",
+  orders:"orders",
+  customer_products:"customer_products",
+  product_requests:"customer_products",
+  withdrawals:"withdrawals",
+  kyc_submissions:"kyc_submissions",
+  wallet_transactions:"wallet_transactions",
+  payment_submissions:"wallet_transactions"
+ };
+ const destination=destinations[source]||"customers";
+ const button=[...document.querySelectorAll("aside button")].find(b=>(b.getAttribute("onclick")||"").includes("'"+destination+"'"));
+ await go(destination,button||undefined);
+ if((source==="support_chat_messages"||source==="support_messages")&&notification.data.customer_id){
+  await openSupportChat(notification.data.customer_id);
+ }
 }
 
 /* CREDIT SCORE */
