@@ -233,7 +233,11 @@ async function refreshAdminBadges(){
 async function start(){
  document.getElementById("login").style.display="none";
  document.getElementById("layout").style.display="flex";
- await go("dashboard",document.querySelector("aside button"));
+ const allowedAdminPages=["dashboard","products","customer_products","orders","wallet_transactions","withdrawals","kyc_submissions","customers","support_messages","notifications","credit_score_history"];
+ let savedAdminPage="dashboard";
+ try{const saved=localStorage.getItem("smartSellerAdminLastPage");if(allowedAdminPages.includes(saved))savedAdminPage=saved;}catch(e){}
+ const savedButton=[...document.querySelectorAll("aside button")].find(b=>(b.getAttribute("onclick")||"").includes("'"+savedAdminPage+"'"));
+ await go(savedAdminPage,savedButton||document.querySelector("aside button"));
  await refreshAdminBadges();
  if(!window.adminBadgeTimer)window.adminBadgeTimer=setInterval(()=>{refreshAdminBadges();if(current==="kyc_submissions")kycPage();if(current==="withdrawals")withdrawalsPage();if(current==="customers")customersPage();if(current==="customer_products"||current==="orders")refreshCustomerProducts();},5000);
 }
@@ -437,7 +441,9 @@ function closeWithdrawalCustomer(){document.getElementById("withdrawalCustomerMo
 
 /* PAGE NAVIGATION */
 async function go(page,btn){
- current=page;const version=++pageVersion;
+ current=page;
+ try{localStorage.setItem("smartSellerAdminLastPage",page);}catch(e){}
+ const version=++pageVersion;
  document.querySelectorAll("aside button").forEach(x=>x.classList.remove("active"));
  if(btn)btn.classList.add("active");
  document.querySelector("aside").classList.remove("open");note("");
