@@ -1007,7 +1007,7 @@ window.loadWithdrawals=async function(){
  }catch(err){box.textContent="Withdrawal history error: "+err.message}
 };
 
-async async function loadProfile(){
+async function loadProfile(){
  if(!currentUser)return;
  $("profileEmail").textContent=currentUser.email||"-";
  $("profileName").textContent=currentUser.user_metadata?.full_name||"-";
@@ -1074,7 +1074,7 @@ $("profileUpdateForm").addEventListener("submit",async e=>{
  button.disabled=false;
 });
 
-async async function loadHomeData(){
+async function loadHomeData(){
  if(!currentUser)return;
  const userId=currentUser.id;
  const withTimeout=(promise,label)=>Promise.race([
