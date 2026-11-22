@@ -1016,7 +1016,7 @@ window.loadWithdrawalStatus=async function(){
  const banner=$("withdrawalStatusBanner");if(!banner||!currentUser)return;
  banner.className="withdrawal-status-banner hidden";banner.textContent="";
  try{
-  const {data,error}=await db.from("withdrawals").select("id,status,created_at,approved_at").eq("customer_id",currentUser.id).order("created_at",{ascending:false}).limit(1).maybeSingle();
+  const {data,error}=await db.from("withdrawals").select("id,status,created_at,approved_at").eq("customer_id",currentUser.id).in("status",["pending","completed","approved"]).order("created_at",{ascending:false}).limit(1).maybeSingle();
   if(error)throw error;
   if(!data)return;
   const status=String(data.status||"").trim().toLowerCase();
