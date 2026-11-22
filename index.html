@@ -588,26 +588,35 @@ window.loadShop=async function(){
 };
 
 async function addProduct(p,button){
+ if(!currentUser?.id){alert("Please login again and try.");return}
  if(!requireKyc())return;
  if(button){button.disabled=true;button.textContent="Adding..."}
  try{
   const {data:existing,error:checkError}=await db.from("customer_products").select("id").eq("customer_id",currentUser.id).eq("product_id",String(p.id)).limit(1);
   if(checkError)throw checkError;
   if(existing?.length){
-   if(button){button.textContent="Added";button.classList.add("gray")}
+   if(button){button.textContent="Added";button.classList.add("gray");button.disabled=true}
    return;
   }
-  const {error}=await db.from("customer_products").insert({
-   customer_id:currentUser.id,product_id:String(p.id),
-   product_name:p.name||"Product",price:Number(p.price||0),
-   category:p.category||"",image_url:p.image_url||p.image||null
-  });
+  const payload={
+   customer_id:currentUser.id,
+   product_id:String(p.id),
+   product_name:p.name||"Product",
+   price:Number(p.price||0),
+   category:p.category||"",
+   image_url:p.image_url||p.image||null
+  };
+  const {data:inserted,error}=await db.from("customer_products").insert(payload).select("id").single();
   if(error)throw error;
+  if(!inserted?.id)throw new Error("Product was not confirmed as saved. Please try again.");
   if(button){button.textContent="Added";button.classList.add("gray");button.disabled=true}
-  await loadMyProducts();await loadHomeData();
+  // Refresh other customer-panel sections without turning a successful save into a failed Add.
+  try{await loadMyProducts()}catch(refreshError){console.warn("My products refresh:",refreshError.message)}
+  try{await loadHomeData()}catch(refreshError){console.warn("Dashboard refresh:",refreshError.message)}
  }catch(err){
   if(button){button.disabled=false;button.textContent="Add +"}
-  alert("Add product error: "+err.message)
+  console.error("Customer Add Product:",err);
+  alert("Add product error: "+(err?.message||String(err)))
  }
 }
 
