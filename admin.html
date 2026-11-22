@@ -591,7 +591,7 @@ async function ordersPage(version=pageVersion){
  await Promise.all([loadCustomers(),loadProducts()]);
  const customerProductsResult=await db.from("customer_products").select("id,customer_id,product_id,product_name,price,category,image_url,created_at").order("created_at",{ascending:false}).limit(2000);
  if(customerProductsResult.error)throw customerProductsResult.error;
- customerProductRows=customerProductsResult.data||[];
+ customerProductRows=(customerProductsResult.data||[]).filter(x=>products.some(p=>String(p.id)===String(x.product_id)));
  if(!pageIs("orders",version))return;profitEdited=false;
  putContent(`
  <h2>Orders</h2>
