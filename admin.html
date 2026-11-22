@@ -391,12 +391,14 @@ async function openKycCustomer(id){
   for(const k of records){
    const imageValue=k.document_url||k.image_url||k.image||k.file_url||k.document_path||"";
    const image=await getKycImageUrl(imageValue);
+   const backImage=await getKycImageUrl(k.document_back_url||"");
    documents.push(`
     <div class="panel">
      <h3>KYC Document</h3>
      <p><b>Document Type:</b> ${esc(k.document_type||"Not available")}</p>
      <p><b>Status:</b> ${esc(k.status||"Pending")}</p>
      ${image?`<a href="${esc(image)}" target="_blank" rel="noopener"><img class="kyc-image" src="${esc(image)}" alt="KYC document" onerror="this.style.display='none';this.nextElementSibling.style.display='block'"></a><p class="error" style="display:none">Picture could not be displayed.</p><p><a href="${esc(image)}" target="_blank" rel="noopener">Open Original KYC Picture</a></p>`:"<p class='error'>KYC picture not available. Check document path in kyc_submissions.</p>"}
+     ${backImage?`<h4>Back Side</h4><a href="${esc(backImage)}" target="_blank" rel="noopener"><img class="kyc-image" src="${esc(backImage)}" alt="KYC back side"></a><p><a href="${esc(backImage)}" target="_blank" rel="noopener">Open Original Back Picture</a></p>`:""}
      <p class="muted">Submitted: ${esc(k.created_at||"")}</p>
     </div>`);
   }
