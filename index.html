@@ -148,6 +148,59 @@ button,input,select,textarea{font-size:14px}
 /* Customer Service dashboard: compact buttons only */
 #supportPage .chat-topbar .chat-back{width:32px;height:32px;flex:0 0 32px;font-size:24px;line-height:1;padding:0}
 #supportPage .chat-composer button{width:36px;height:36px;flex:0 0 36px;font-size:18px;padding:0}
+
+/* SMART SELLER OFFICIAL MOBILE CUSTOMER DESIGN */
+@media(max-width:600px){
+ :root{--bg:#f5f3ee;--card:#fffdfa;--navy:#14243d;--blue:#29496f;--text:#18283d;--muted:#788393;--border:#e9e4d9}
+ body:has(#dashboard:not(.hidden)){background:#f5f3ee;background-image:radial-gradient(ellipse at 90% 0%,#e9dfc9 0,transparent 38%);background-attachment:fixed;color:var(--text);padding-bottom:88px}
+ body:has(#dashboard:not(.hidden))>header{height:68px;padding:0 19px;background:#14243d;box-shadow:0 5px 22px #14243d24;border-bottom:1px solid #c9a85c}
+ body:has(#dashboard:not(.hidden)) .logo{font-size:20px;letter-spacing:1.1px;font-weight:800;color:#fff}
+ body:has(#dashboard:not(.hidden)) .logo span{color:#d8b66b}
+ body:has(#dashboard:not(.hidden)) .menu-btn{color:#f2d99d}
+ body:has(#dashboard:not(.hidden)) main{padding:17px 15px 22px;max-width:520px}
+ #dashboard .page-title{padding:5px 3px 12px;margin:0 0 7px}
+ #dashboard .page-title h2{font-size:25px;line-height:1.15;letter-spacing:-.6px;color:#14243d;margin:4px 0 6px;font-weight:800}
+ #dashboard .page-title p{font-size:13px;color:#7b8491;margin:0}
+ #dashboard .card,#dashboard .stat,#dashboard .product-card,#dashboard .data-card{background:#fffdfa;border:1px solid #e9e4d9;border-radius:17px;box-shadow:0 7px 22px #28374b0b}
+ #dashboard .stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ #dashboard .stat{padding:13px 12px;margin:0;min-height:150px;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start}
+ #dashboard .stat-icon{width:39px;height:39px;border-radius:12px;background:#f4eddd;color:#14243d;margin:0 0 10px;font-size:21px}
+ #dashboard .stat .stat-label{font-size:11px;font-weight:700;letter-spacing:.35px;text-transform:uppercase;color:#788393}
+ #dashboard .stat strong{font-size:21px;line-height:1.2;color:#18283d;margin:7px 0 11px}
+ #dashboard .stat button{width:100%;margin-top:auto;padding:9px 8px;border-radius:9px;background:#edf1f5;color:#243b59;font-size:11px;font-weight:800}
+ #dashboard .stat:first-child{grid-column:1/-1;min-height:174px;padding:18px 18px 16px;background:linear-gradient(125deg,#14243d 0%,#203b5d 68%,#294b6b 100%);border:1px solid #c6a45c;box-shadow:0 12px 27px #14243d24;position:relative;overflow:hidden}
+ #dashboard .stat:first-child:after{content:"";position:absolute;width:150px;height:150px;border:1px solid #d8b66b55;border-radius:50%;right:-44px;top:-62px;box-shadow:0 0 0 17px #d8b66b12,0 0 0 34px #d8b66b0a;pointer-events:none}
+ #dashboard .stat:first-child .stat-icon{background:#d8b66b20;color:#f2d99d}
+ #dashboard .stat:first-child .stat-label{color:#d8dce4;font-size:11px;letter-spacing:1px}
+ #dashboard .stat:first-child strong{font-size:31px;color:#fff;margin:9px 0 14px;letter-spacing:-.5px}
+ #dashboard .stat:first-child button{width:auto;min-width:118px;background:#d8b66b;color:#14243d;padding:10px 16px;font-size:12px}
+ #dashboard .stat:nth-child(2) .stat-icon{background:#f3eddf}
+ #dashboard .stat:nth-child(3) .stat-icon{background:#e8eff5}
+ #dashboard .stat:nth-child(4) .stat-icon{background:#edf0e8}
+ #dashboard .stat:nth-child(5) .stat-icon{background:#f4eade}
+ #dashboard .stat:nth-child(6) .stat-icon{background:#eeeaf5}
+ #dashboard #homeCredit{color:#94713a}
+ #dashboard #homeOrders{color:#345b7b}
+ #dashboard #homeProducts{color:#526c4e}
+ #dashboard #homeProfit{color:#94713a}
+ #dashboard .stat:nth-child(6) strong{color:#5e5682}
+ #dashboard .stat:nth-child(6) button{background:#14243d;color:#fff}
+ #dashboard #customerMessagesBadge{align-self:flex-start}
+ #dashboard #homePage>.card{padding:16px;border-radius:16px}
+ #dashboard #homePage>.card h3{color:#14243d;font-size:15px;margin:0 0 6px}
+ #dashboard #homePage>.card p{font-size:12px;margin:0 0 12px}
+ #dashboard #homePage>.card button{background:#14243d;color:#e9cc8b;padding:10px 14px;font-size:12px}
+ #dashboard .bottom-nav{background:#14243d;border-top:1px solid #c6a45c;box-shadow:0 -7px 22px #14243d1c;padding:8px 5px calc(8px + env(safe-area-inset-bottom))}
+ #bottomNav button{color:#b9c3d0;border-radius:11px;font-size:10px;font-weight:700}
+ #bottomNav button.active{background:#d8b66b;color:#14243d}
+ #bottomNav button span{font-size:20px;margin-bottom:3px}
+ #dashboard .page:not(#homePage) .page-title h2{font-size:23px}
+ #dashboard .tabs button{border-radius:9px}
+ #dashboard .product-card,#dashboard .data-card{padding:12px}
+ #dashboard input,#dashboard select,#dashboard textarea{border-color:#e5dfd2;border-radius:11px}
+ #dashboard button{border-radius:10px}
+}
+
 </style>
 </head>
 <body>
