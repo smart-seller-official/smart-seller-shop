@@ -445,6 +445,9 @@ async function loadDashboard(user){
  results.forEach((result,index)=>{
   if(result.status==="rejected")console.error("Customer data load failed ("+index+"):",result.reason);
  });
+ // Refresh the visible dashboard metrics after the other account requests finish.
+ // This prevents the initial page from retaining placeholder zero values after refresh.
+ await Promise.allSettled([loadProfile(),loadHomeData()]);
 }
 
 function customerBadgeKey(kind){return "smartSeller_"+kind+"_seen_"+currentUser.id}
