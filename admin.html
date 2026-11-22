@@ -44,6 +44,10 @@ th{background:#f4f6fb}
 .support-row button{flex:0 0 auto;margin:0;padding:7px 10px}
 @media(max-width:760px){.support-customer{flex-basis:145px}.support-email{flex-basis:170px}}
 img.product{width:65px;height:65px;object-fit:cover;border-radius:7px}
+.product-edit-modal{display:none;position:fixed;inset:0;background:#0009;z-index:10000;overflow:auto;padding:16px}
+.product-edit-box{background:#fff;max-width:650px;margin:25px auto;padding:20px;border-radius:12px}
+.product-edit-images{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.product-edit-images img{width:90px;height:90px;object-fit:cover;border-radius:8px}
 #toggle{display:none}
 .preview{width:100px;height:100px;object-fit:cover;border-radius:8px;display:none;margin:8px 0}
 pre{white-space:pre-wrap;overflow-wrap:anywhere}
@@ -514,7 +518,22 @@ async function productPage(version=pageVersion){
  <input id="pimagefile" type="file" accept="image/*" multiple onchange="previewProductImage()">
  <div id="imagePreview" style="display:flex;flex-wrap:wrap;gap:8px;margin:10px 0"></div><p id="imageCount" class="muted">At least 3 pictures required. Maximum 5 MB each.</p>
  <button class="green" id="addProductButton" onclick="addProduct()">Upload Pictures & Add Product</button>
- </div><div class="panel"><h3>All Products</h3><div id="productList"></div></div>`,"products",version);
+ </div><div class="panel"><h3>All Products</h3><div id="productList"></div></div>
+ <div id="productEditModal" class="product-edit-modal">
+  <div class="product-edit-box">
+   <h3>Edit Product</h3>
+   <label>Product Name</label><input id="editPname">
+   <label>Price ($)</label><input id="editPprice" type="number" step="0.01" min="0">
+   <label>Category</label><input id="editPcat">
+   <label>Description</label><textarea id="editPdescription" rows="3"></textarea>
+   <label>Current Pictures</label><div id="editProductCurrentImages" class="product-edit-images"></div>
+   <label>Replace Pictures (select at least 3 new pictures, or leave empty to keep current)</label>
+   <input id="editPimagefile" type="file" accept="image/*" multiple>
+   <p class="muted">Maximum 5 MB per picture. Existing pictures remain unchanged if no new pictures are selected.</p>
+   <button class="green" id="saveProductEditButton" onclick="saveProductEdit()">Save Changes</button>
+   <button class="gray" onclick="closeProductEdit()">Cancel</button>
+  </div>
+ </div>`,"products",version);
  renderProducts();
 }
 function renderProducts(){
@@ -535,21 +554,43 @@ async function addProduct(){
   if(r.error)throw r.error;note("Product successfully add ho gaya.");if(current==="products")await productPage();
  }catch(e){note(e.message,true)}finally{const btn=document.getElementById("addProductButton");if(btn)btn.disabled=false}
 }
-async function editProduct(id){
+let editingProductId=null;
+function editProduct(id){
  const p=products.find(x=>String(x.id)===String(id));if(!p)return;
- const name=prompt("Product name",p.name);if(name===null)return;
- const price=prompt("Price",p.price);if(price===null)return;
- const category=prompt("Category",p.category||"");if(category===null)return;
- let images=productImages(p);
- if(confirm("Pictures replace karni hain? OK = kam az kam 3 new pictures select karein, Cancel = current pictures rakhein.")){
-  const picker=document.createElement("input");picker.type="file";picker.accept="image/*";picker.multiple=true;
-  const files=await new Promise(resolve=>{picker.onchange=()=>resolve(Array.from(picker.files||[]));picker.click()});
-  if(!files.length)return;if(files.length<3)return note("Kam az kam 3 pictures select karein.",true);
-  try{images=[];for(const file of files)images.push(await uploadProductImage(file))}catch(e){return note(e.message,true)}
- }
- const n=Number(price);if(!name.trim()||!Number.isFinite(n)||n<0)return note("Name aur price check karein.",true);
- const r=await db.from("products").update({name:name.trim(),price:n,category:category||null,image:JSON.stringify(images),image_url:images[0]||null}).eq("id",id);
- if(r.error)return note(r.error.message,true);note("Product updated.");if(current==="products")await productPage();
+ editingProductId=String(id);
+ document.getElementById("editPname").value=p.name||"";
+ document.getElementById("editPprice").value=p.price??"";
+ document.getElementById("editPcat").value=p.category||"";
+ document.getElementById("editPdescription").value=p.description||"";
+ document.getElementById("editPimagefile").value="";
+ const pics=productImages(p);
+ document.getElementById("editProductCurrentImages").innerHTML=pics.map(src=>`<img src="${esc(src)}" alt="Product picture">`).join("")||"No pictures";
+ document.getElementById("productEditModal").style.display="block";
+}
+function closeProductEdit(){
+ const modal=document.getElementById("productEditModal");if(modal)modal.style.display="none";
+ editingProductId=null;
+}
+async function saveProductEdit(){
+ const id=editingProductId,p=products.find(x=>String(x.id)===String(id));
+ if(!id||!p)return note("Product not found.",true);
+ const name=val("editPname"),priceText=val("editPprice"),price=Number(priceText),category=val("editPcat"),description=val("editPdescription");
+ const files=Array.from(document.getElementById("editPimagefile")?.files||[]);
+ if(!name||priceText===""||!Number.isFinite(price)||price<0)return note("Product name aur valid price enter karein.",true);
+ if(files.length===1||files.length===2)return note("Pictures replace karne ke liye kam az kam 3 new pictures select karein.",true);
+ const b=document.getElementById("saveProductEditButton");if(b){b.disabled=true;b.textContent="Saving...";}
+ try{
+  let images=productImages(p);
+  if(files.length>=3){images=[];for(const file of files)images.push(await uploadProductImage(file));}
+  const update={name:name.trim(),price,category:category||null,description:description||null,image:JSON.stringify(images),image_url:images[0]||null};
+  const r=await db.from("products").update(update).eq("id",id).select("*").maybeSingle();
+  if(r.error)throw r.error;
+  if(!r.data)throw new Error("Product update nahi hua. Admin permission check karein.");
+  note("Product successfully updated.");
+  closeProductEdit();
+  await productPage();
+ }catch(e){note("Product update error: "+e.message,true)}
+ finally{const btn=document.getElementById("saveProductEditButton");if(btn){btn.disabled=false;btn.textContent="Save Changes";}}
 }
 async function deleteProduct(id){
  if(!confirm("Delete this product?"))return;
