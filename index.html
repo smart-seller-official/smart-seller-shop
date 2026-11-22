@@ -202,19 +202,6 @@ button,input,select,textarea{font-size:14px}
  #dashboard button{border-radius:10px}
 }
 
-
-/* Dashboard language selector */
-#dashboard .dashboard-title-row{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
-#dashboard .dashboard-title-row h2{margin:4px 0;flex:1;min-width:0}
-.language-picker{position:relative;flex:0 0 auto}
-#languagePickerButton{width:34px;height:34px;padding:0;margin:0;border-radius:50%;border:1px solid #d8b66b;background:#fffdfa;color:#14243d;font-size:19px;line-height:1;display:grid;place-items:center}
-#languagePickerPanel{position:absolute;right:0;top:41px;z-index:1000;width:205px;padding:9px;background:#fffdfa;border:1px solid #d8b66b;border-radius:10px;box-shadow:0 8px 24px #14243d25}
-#google_translate_element{width:100%;min-width:0;text-align:left}
-#google_translate_element .goog-te-gadget{font-family:Arial,sans-serif!important;font-size:0!important;color:transparent!important;white-space:normal}
-#google_translate_element .goog-te-combo{width:100%;max-width:100%;margin:0!important;padding:9px 8px!important;border:1px solid #d8b66b!important;border-radius:8px!important;background:#fffdfa!important;color:#14243d!important;font-size:13px!important;line-height:1.3!important}
-#google_translate_element .goog-te-gadget span{display:none!important}
-#google_translate_element img{display:none!important}
-
 </style>
 </head>
 <body>
@@ -276,7 +263,7 @@ button,input,select,textarea{font-size:14px}
 
 <div id="dashboard" class="hidden">
  <section id="homePage" class="page">
-  <div class="page-title"><div class="dashboard-title-row"><h2>Dashboard</h2><div class="language-picker"><button type="button" id="languagePickerButton" aria-label="Change language" title="Change language" onclick="toggleLanguagePicker()">🌐</button><div id="languagePickerPanel" class="hidden"><div id="google_translate_element" aria-label="Choose language"></div></div></div></div><p class="muted">Here's your account overview.</p></div>
+  <div class="page-title"><h2>Dashboard</h2><p class="muted">Here's your account overview.</p></div>
   <div class="stats">
    <div class="stat"><div class="stat-icon">💰</div><div class="stat-label">Wallet Balance</div><strong id="homeBalance" class="green"></strong><button class="green-btn" onclick="openPage('wallet')">View Wallet</button></div>
    <div class="stat"><div class="stat-icon">⭐</div><div class="stat-label">Credit Score</div><strong id="homeCredit" class="purple">-</strong><button onclick="toggleProfile()">View Profile</button></div>
@@ -532,7 +519,6 @@ $("newPasswordForm").addEventListener("submit",async e=>{
 });
 
 async function loadDashboard(user){
- resetCustomerLanguageForNewLogin(user.id);
  currentUser=user;
  isKycApproved=false;
  $("authArea").classList.add("hidden");
@@ -1448,7 +1434,6 @@ $("supportForm").addEventListener("submit",async e=>{
 window.logout=async function(){
  const {error}=await db.auth.signOut();
  if(error){msg("Logout error: "+error.message);return}
- localStorage.removeItem('smartSeller_language_login_user');
  currentUser=null;isKycApproved=false;
  $("dashboard").classList.add("hidden");$("bottomNav").classList.add("hidden");$("authArea").classList.remove("hidden");
  $("loginForm").reset();showLogin();
@@ -1470,41 +1455,6 @@ setInterval(()=>{
   if(data.session)await loadDashboard(data.session.user);
  }catch(err){msg("Session error: "+err.message)}
 })();
-</script>
-
-<script>
-function googleTranslateElementInit(){
- if(window.google&&google.translate&&google.translate.TranslateElement){
-  new google.translate.TranslateElement({pageLanguage:'en',autoDisplay:false},'google_translate_element');
- }
-}
-</script>
-<script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-
-<script>
-function toggleLanguagePicker(){
- const panel=document.getElementById('languagePickerPanel');
- if(panel)panel.classList.toggle('hidden');
-}
-document.addEventListener('click',function(e){
- const picker=document.querySelector('.language-picker');
- const panel=document.getElementById('languagePickerPanel');
- if(picker&&panel&&!picker.contains(e.target))panel.classList.add('hidden');
-});
-function resetCustomerLanguageForNewLogin(userId){
- const key='smartSeller_language_login_user';
- if(localStorage.getItem(key)===userId)return;
- localStorage.setItem(key,userId);
- const current=(document.cookie.match(/(?:^|;\s*)googtrans=([^;]+)/)||[])[1]||'';
- if(current&&decodeURIComponent(current)!=='/en/en'){
-  document.cookie='googtrans=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
-  document.cookie='googtrans=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain='+location.hostname;
-  document.cookie='googtrans=/en/en; path=/';
-  location.reload();
- }else{
-  document.cookie='googtrans=/en/en; path=/';
- }
-}
 </script>
 </body>
 </html>
