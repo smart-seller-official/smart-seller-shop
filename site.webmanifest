@@ -1,0 +1,16 @@
+{
+  "name": "Smart Seller",
+  "short_name": "Smart Seller",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#14243d",
+  "theme_color": "#14243d",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
