@@ -197,11 +197,11 @@ button,input,select,textarea{font-size:14px}
  <section id="homePage" class="page">
   <div class="page-title"><h2>Dashboard</h2><p class="muted">Here's your account overview.</p></div>
   <div class="stats">
-   <div class="stat"><div class="stat-icon">💰</div><div class="stat-label">Wallet Balance</div><strong id="homeBalance" class="green">$0.00</strong><button class="green-btn" onclick="openPage('wallet')">View Wallet</button></div>
+   <div class="stat"><div class="stat-icon">💰</div><div class="stat-label">Wallet Balance</div><strong id="homeBalance" class="green">Loading...</strong><button class="green-btn" onclick="openPage('wallet')">View Wallet</button></div>
    <div class="stat"><div class="stat-icon">⭐</div><div class="stat-label">Credit Score</div><strong id="homeCredit" class="purple">-</strong><button onclick="toggleProfile()">View Profile</button></div>
-   <div class="stat"><div class="stat-icon">🛒</div><div class="stat-label">Total Orders</div><strong id="homeOrders" class="blue">0</strong><button onclick="openPage('orders')">View Orders</button></div>
-   <div class="stat"><div class="stat-icon">📦</div><div class="stat-label">My Products</div><strong id="homeProducts">0</strong><button onclick="openPage('products')">View Products</button></div>
-   <div class="stat"><div class="stat-icon">💵</div><div class="stat-label">Total Profit</div><strong id="homeProfit" class="purple">$0.00</strong><button onclick="openPage('wallet')">View Profit</button></div>
+   <div class="stat"><div class="stat-icon">🛒</div><div class="stat-label">Total Orders</div><strong id="homeOrders" class="blue">Loading...</strong><button onclick="openPage('orders')">View Orders</button></div>
+   <div class="stat"><div class="stat-icon">📦</div><div class="stat-label">My Products</div><strong id="homeProducts">Loading...</strong><button onclick="openPage('products')">View Products</button></div>
+   <div class="stat"><div class="stat-icon">💵</div><div class="stat-label">Total Profit</div><strong id="homeProfit" class="purple">Loading...</strong><button onclick="openPage('wallet')">View Profit</button></div>
    <div class="stat"><div class="stat-icon">🎧</div><div class="stat-label">Customer Service</div><strong class="blue">Support</strong><button onclick="openPage('support')">Open Customer Service</button></div>
   </div>
  </section>
@@ -228,8 +228,8 @@ button,input,select,textarea{font-size:14px}
    <div class="score-track"><div class="score-fill" id="walletScoreFill" style="width:0%"></div></div>
    <div class="success-note">✓ Your credit score is shown from your account profile.</div>
   </div>
-  <div class="stat">Available Balance<strong id="walletBalance" class="green">$0.00</strong></div>
-  <div class="stat">Total Profit<strong id="walletProfit" class="purple">$0.00</strong></div>
+  <div class="stat">Available Balance<strong id="walletBalance" class="green">Loading...</strong></div>
+  <div class="stat">Total Profit<strong id="walletProfit" class="purple">Loading...</strong></div>
   <div class="stat">Applied Balance<strong id="walletApplied" class="blue">$0.00</strong></div>
   <p class="muted">Applied Balance shows only picked-up orders that are not complete.</p>
   <p id="walletMessage" class="message"></p>
@@ -419,6 +419,8 @@ $("newPasswordForm").addEventListener("submit",async e=>{
 async function loadDashboard(user){
  currentUser=user;
  isKycApproved=false;
+ // Do not show fake zero values while the saved customer data is loading.
+ ["homeBalance","homeOrders","homeProducts","homeProfit","walletBalance","walletProfit","walletApplied"].forEach(id=>{const el=$(id);if(el)el.textContent="Loading...";});
  $("authArea").classList.add("hidden");
  $("dashboard").classList.remove("hidden");
  $("bottomNav").classList.remove("hidden");
