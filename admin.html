@@ -990,17 +990,16 @@ async function openSupportChat(customerId,preserveDraft=false){
  putContent(`<section class="admin-chat-screen">
   <div class="admin-chat-topbar"><button type="button" class="admin-chat-back" onclick="closeAdminSupportChat()">‹</button><div><strong>${esc(supportCustomerName(customerId))}</strong><small>${esc(supportCustomerEmail(customerId))}</small></div><span class="admin-chat-online"></span></div>
   <div id="supportChatMessages" class="admin-chat-messages"></div>
-  <div class="admin-chat-compose"><textarea id="supportReply" placeholder="Type a message..." rows="1">${preserveDraft?esc(draft):""}</textarea><button class="green" id="sendSupportReply" onclick="sendReply()" aria-label="Send message">➤</button></div>
+  <div class="admin-chat-compose"><textarea id="supportReply" placeholder="Type a message..." rows="1">${preserveDraft?esc(draft):""}</textarea><input id="adminSupportImage" type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden><button type="button" class="gray" onclick="document.getElementById('adminSupportImage').click()" aria-label="Attach image">📎</button><button class="green" id="sendSupportReply" onclick="sendReply()" aria-label="Send message">➤</button></div>
  </section>`,"support_messages",pageVersion);
  const box=document.getElementById("supportChatMessages");
  if(!box)return;
- box.innerHTML=messages.map(m=>{
-  const role=String(m.sender_role||m.sender||"customer").toLowerCase();
-  const admin=role==="admin";
-  return `<div class="chat-bubble ${admin?"chat-admin":"chat-customer"}">
-   <div class="chat-meta">${admin?"Admin":"Customer"} · ${esc(m.created_at||"")}${!admin?(m.read_at?" · Read":" · Unread"):""}</div>
-   <p>${esc(m.message||"")}</p></div>`;
- }).join("")||"No messages.";
+ const renderedMessages=await Promise.all(messages.map(async m=>{
+   const role=String(m.sender_role||m.sender||"customer").toLowerCase();const admin=role==="admin";let imageHtml="";
+   if(m.image_path){const signed=await db.storage.from("support-chat-images").createSignedUrl(m.image_path,3600);if(signed.error)throw signed.error;const url=esc(signed.data.signedUrl);imageHtml=`<a href="${url}" target="_blank" rel="noopener"><img style="display:block;max-width:240px;max-height:240px;width:auto;height:auto;object-fit:contain;border-radius:10px;margin-top:7px" src="${url}" alt="Chat attachment"></a>`;}
+   return `<div class="chat-bubble ${admin?"chat-admin":"chat-customer"}"><div class="chat-meta">${admin?"Admin":"Customer"} · ${esc(m.created_at||"")}${!admin?(m.read_at?" · Read":" · Unread"):""}</div>${m.message?`<p>${esc(m.message)}</p>`:""}${imageHtml}</div>`;
+  }));
+  box.innerHTML=renderedMessages.join("")||"No messages.";
  const unreadIds=messages.filter(m=>String(m.sender_role||m.sender||"").toLowerCase()==="customer"&&!m.read_at).map(m=>m.id).filter(Boolean);
  if(unreadIds.length){
   try{
@@ -1019,14 +1018,18 @@ async function openSupportChat(customerId,preserveDraft=false){
 async function sendReply(){
  const customerId=activeSupportCustomerId;
  const el=document.getElementById("supportReply"),btn=document.getElementById("sendSupportReply");
- if(!customerId||!el||!el.value.trim())return note("Reply likhein.",true);
- if(sendingReplyIds.has(customerId))return;
- const message=el.value.trim();
+  const imageFile=document.getElementById("adminSupportImage")?.files?.[0]||null;
+  if(!customerId||!el||(!el.value.trim()&&!imageFile))return note("Reply likhein ya image attach karein.",true);
+  if(imageFile&&(!imageFile.type.startsWith("image/")||imageFile.size>5*1024*1024))return note("Image sirf JPG, PNG, WEBP ya GIF ho aur 5 MB se choti ho.",true);
+  if(sendingReplyIds.has(customerId))return;
+  const message=el.value.trim();
  sendingReplyIds.add(customerId);
  if(btn){btn.disabled=true;btn.textContent="Sending...";}
  try{
-  const r=await db.from("support_chat_messages").insert({customer_id:customerId,sender:"admin",sender_role:"admin",message});
-  if(r.error)throw r.error;
+  let imagePath=null;
+   if(imageFile){const ext=(imageFile.name.split(".").pop()||"jpg").toLowerCase().replace(/[^a-z0-9]/g,"")||"jpg";imagePath=customerId+"/"+(crypto.randomUUID?crypto.randomUUID():Date.now())+"."+ext;const uploaded=await db.storage.from("support-chat-images").upload(imagePath,imageFile,{contentType:imageFile.type,cacheControl:"3600",upsert:false});if(uploaded.error)throw uploaded.error;}
+   const r=await db.from("support_chat_messages").insert({customer_id:customerId,sender:"admin",sender_role:"admin",message:message||"",image_path:imagePath});if(r.error)throw r.error;
+   const imageInput=document.getElementById("adminSupportImage");if(imageInput)imageInput.value="";
   note("Admin message successfully send ho gaya.");
   const refreshed=await db.from("support_chat_messages").select("*").order("created_at",{ascending:true}).limit(1000);
   if(refreshed.error)throw refreshed.error;
