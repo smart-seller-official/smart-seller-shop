@@ -627,7 +627,10 @@ function openProductPictureViewer(images,startIndex,productName){
  const viewer=document.createElement("div");viewer.id="productPictureViewer";
  Object.assign(viewer.style,{position:"fixed",inset:"0",zIndex:"100001",background:"rgba(0,0,0,.96)",display:"flex",alignItems:"center",justifyContent:"center",padding:"18px"});
  const image=document.createElement("img");image.alt=productName+" picture";
- Object.assign(image.style,{maxWidth:"min(92vw,1100px)",maxHeight:"82vh",objectFit:"contain",borderRadius:"8px"});
+ Object.assign(image.style,{maxWidth:"min(92vw,1100px)",maxHeight:"82vh",objectFit:"contain",borderRadius:"8px",touchAction:"pan-y"});
+ let touchStartX=0;
+ image.addEventListener("touchstart",e=>{touchStartX=e.changedTouches[0].screenX},{passive:true});
+ image.addEventListener("touchend",e=>{const delta=e.changedTouches[0].screenX-touchStartX;if(Math.abs(delta)>45)go(delta<0?1:-1)},{passive:true});
  const close=document.createElement("button");close.type="button";close.textContent="✕";close.setAttribute("aria-label","Close picture");
  Object.assign(close.style,{position:"absolute",top:"16px",right:"18px",background:"#fff",color:"#111",border:"0",borderRadius:"50%",width:"42px",height:"42px",fontSize:"24px",cursor:"pointer"});
  const counter=document.createElement("div");Object.assign(counter.style,{position:"absolute",bottom:"18px",left:"50%",transform:"translateX(-50%)",color:"#fff",fontSize:"14px"});
@@ -878,7 +881,7 @@ function openOrderTracking(o){
  const progress=document.createElement("div");progress.className="ot-progress";orderProgress(o.status).forEach(step=>progress.appendChild(step));panel.appendChild(progress);
  const product=document.createElement("div");product.className="ot-product";
  const images=productImageList(o.product_image||o.image||o.image_url);
- if(images.length){const photo=document.createElement("img");photo.className="ot-photo";photo.src=images[0];photo.alt="Product";photo.onerror=()=>{photo.onerror=null;photo.src="https://placehold.co/240x240/f1edff/5141a5?text=Product"};product.appendChild(photo)}
+ if(images.length){const photo=document.createElement("img");photo.className="ot-photo";photo.src=images[0];photo.alt="Product";photo.style.cursor="zoom-in";photo.onclick=e=>{e.stopPropagation();openProductPictureViewer(images,0,o.product_name||"Product")};photo.onerror=()=>{photo.onerror=null;photo.src="https://placehold.co/240x240/f1edff/5141a5?text=Product"};product.appendChild(photo)}
  const details=document.createElement("div");details.style.minWidth="0";
  const name=document.createElement("div");name.className="ot-name";name.textContent=o.product_name||"Order";
  const category=document.createElement("div");category.style.color="#626887";category.textContent="Product order";
@@ -895,7 +898,10 @@ function makeOrderCard(o){
  const card=document.createElement("div");card.className="data-card order-card";card.style.cursor="pointer";card.title="Click to view order tracking";card.onclick=()=>openOrderTracking(o);
  const head=document.createElement("div");head.className="order-head";
  const image=document.createElement("img");image.className="order-product-image";image.alt="Product";
- image.src=productImageList(o.product_image||o.image||o.image_url)[0]||"https://placehold.co/120x120/eaf0f8/405be8?text=Product";
+ const orderImages=productImageList(o.product_image||o.image||o.image_url);
+ image.src=orderImages[0]||"https://placehold.co/120x120/eaf0f8/405be8?text=Product";
+ image.style.cursor="zoom-in";
+ image.onclick=e=>{e.stopPropagation();if(orderImages.length)openProductPictureViewer(orderImages,0,o.product_name||"Product")};
  image.onerror=()=>{image.onerror=null;image.src="https://placehold.co/120x120/eaf0f8/405be8?text=Product"};
  const details=document.createElement("div");details.className="order-details";
  const title=document.createElement("h3");title.textContent=o.product_name||"Order";
