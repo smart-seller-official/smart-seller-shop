@@ -90,6 +90,17 @@ aside.open{display:block}
 #toggle{display:inline-block}
 main{padding:12px}
 }
+
+/* Compact spacing for selected admin sections only */
+.compact-admin-page main{padding:10px 12px}
+.compact-admin-page .panel,.compact-admin-page .stat{padding:10px;margin-bottom:8px;border-radius:9px}
+.compact-admin-page h2{margin:0 0 8px}
+.compact-admin-page h3{margin:0 0 7px}
+.compact-admin-page label{display:block;margin-top:2px}
+.compact-admin-page input,.compact-admin-page select,.compact-admin-page textarea{padding:8px;margin:3px 0 7px}
+.compact-admin-page td,.compact-admin-page th{padding:7px}
+.compact-admin-page .cards{gap:8px}
+.compact-admin-page .stat strong{margin-top:4px}
 </style>
 </head>
 <body>
@@ -451,6 +462,7 @@ function closeWithdrawalCustomer(){document.getElementById("withdrawalCustomerMo
 /* PAGE NAVIGATION */
 async function go(page,btn){
  current=page;
+ document.body.classList.toggle("compact-admin-page",["products","orders","wallet_transactions","credit_score_history"].includes(page));
  try{localStorage.setItem("smartSellerAdminLastPage",page);}catch(e){}
  const version=++pageVersion;
  document.querySelectorAll("aside button").forEach(x=>x.classList.remove("active"));
