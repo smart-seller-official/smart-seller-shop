@@ -525,7 +525,8 @@ function getProductImageUrl(value){
 function addProductImage(container,value){
  const img=document.createElement("img");
  img.className="product-image";img.alt="Product picture";
- const url=getProductImageUrl(value);
+ const urls=productImageList(value);
+ const url=urls[0]||"";
  img.src=url||"https://placehold.co/700x400/eaf0f8/405be8?text=Product";
  img.onerror=()=>{img.onerror=null;img.src="https://placehold.co/700x400/eaf0f8/405be8?text=Image+Unavailable"};
  container.appendChild(img);
@@ -535,7 +536,7 @@ window.loadShop=async function(){
  const box=$("shopList");box.textContent="Loading products...";
  try{
   const [productsResult,addedResult]=await Promise.all([
-   db.from("products").select("id,name,price,category,image").order("id",{ascending:false}),
+   db.from("products").select("id,name,description,price,category,image,image_url").order("id",{ascending:false}),
    db.from("customer_products").select("product_id").eq("customer_id",currentUser.id)
   ]);
   if(productsResult.error)throw productsResult.error;
