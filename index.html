@@ -662,14 +662,15 @@ function orderProfit(o){
 function orderStatus(o){
  const s=String(o.status||"pending").toLowerCase().trim();
  if(["pending","pickup"].includes(s))return "PICKUP";
- if(["processing","picked_up","picked up","in_progress"].includes(s))return "PROCESSING";
+ if(["picked","picked_up","picked up"].includes(s))return "PICKED";
+ if(["processing","in_progress"].includes(s))return "PROCESSING";
  if(["shipping","shipped"].includes(s))return "SHIPPING";
  if(["completed","complete","delivered"].includes(s))return "COMPLETE";
  return s.toUpperCase();
 }
 function orderProgress(status){
  const current=orderStatus({status});
- const stages=["PICKUP","PROCESSING","SHIPPING","COMPLETE"];
+ const stages=["PICKUP","PICKED","PROCESSING","SHIPPING","COMPLETE"];
  const index=stages.indexOf(current);
  return stages.map((stage,i)=>{
   const step=document.createElement("span");
@@ -700,7 +701,7 @@ async function getWalletSummary(){
  });
  (orderResult.data||[]).forEach(o=>{
   const status=String(o.status||"").toLowerCase().trim();
-  const pickedUpStatuses=["processing","shipped","shipping","picked_up","picked up","in_progress"];
+  const pickedUpStatuses=["picked","processing","shipped","shipping","picked_up","picked up","in_progress"];
   if(pickedUpStatuses.includes(status))applied+=orderPrice(o);
  });
  return {available:Math.max(0,available),profit:Math.max(0,profit),applied:Math.max(0,applied)};
@@ -722,7 +723,7 @@ async function pickupOrder(orderId,button,statusElement,order){
   const {data,error}=await db.rpc("customer_pickup_order",{p_order_id:orderId});
   if(error)throw error;
   if(!data||data.success!==true)throw new Error(data?.message||"Pickup failed.");
-  statusElement.className="status shipped";statusElement.textContent="PROCESSING";button.remove();
+  statusElement.className="status shipped";statusElement.textContent="PICKED";button.remove();
   await Promise.all([loadOrders(),loadWallet(),loadHomeData()]);
  }catch(err){button.disabled=false;button.textContent="PICKUP";alert("Pickup error: "+err.message)}
 }
