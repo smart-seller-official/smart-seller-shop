@@ -1254,18 +1254,12 @@ $("supportForm").addEventListener("submit",async e=>{
  try{
   const {error}=await db
    .from("support_chat_messages")
-   .insert([
-    {
-     customer_id:currentUser.id,
-     sender:"customer",
-     message:message
-    },
-    {
-     customer_id:currentUser.id,
-     sender:"admin",
-     message:"Thank you for contacting Smart Seller Customer Service. Your message has been received. Our team will reply shortly."
-    }
-   ]);
+   .insert({
+    customer_id:currentUser.id,
+    sender:"customer",
+    sender_role:"customer",
+    message:message
+   });
 
   if(error)throw error;
 
