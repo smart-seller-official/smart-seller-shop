@@ -509,7 +509,7 @@ async function dashboard(version){
    if(r.error)error=true;else displayCount=r.count??0;
   }
   if(!pageIs("dashboard",version))return;
-  const action=table==="orders"?"openDashboardOrders()":"go('\${page}')";
+  const action=table==="orders"?"openDashboardOrders()":"go('"+page+"')";
   html+='<div class="stat dashboard-stat" role="button" tabindex="0" onclick="'+action+'" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();'+action+'}">'+name+'<strong>'+(error?"Error":displayCount)+'</strong><span class="stat-hint">Click to open</span></div>';
  }
  putContent(html+"</div>","dashboard",version);
