@@ -118,7 +118,7 @@ button,input,select,textarea{font-size:14px}
 .chat-composer textarea{font-size:14px}
 
 
-/* Show two customer product cards side by side */
+.my-products-count{background:#eaf2ff;border:1px solid #d5e3fb;color:#244a91;border-radius:10px;padding:11px 13px;margin:0 0 11px;font-size:14px;font-weight:700;text-align:center}\n\n/* Show two customer product cards side by side */
 #shopList,#myProductsList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:start}
 #shopList .product-card,#myProductsList .product-card{min-width:0;margin:0;padding:9px;border-radius:12px}
 #shopList .product-image,#myProductsList .product-image{height:125px;object-fit:cover}
@@ -203,7 +203,7 @@ button,input,select,textarea{font-size:14px}
  <section id="productsPage" class="page hidden">
   <div class="tabs"><button id="shopTab" class="active" onclick="showProductTab('shop')">Shop</button><button id="myProductsTab" onclick="showProductTab('mine')">My Products</button></div>
   <div id="shopPanel"><div id="shopList">Loading products...</div><button class="full gray" onclick="loadShop()">Refresh Shop</button></div>
-  <div id="myProductsPanel" class="hidden"><div id="myProductsList">Loading...</div><button class="full gray" onclick="loadMyProducts()">Refresh Products</button></div>
+  <div id="myProductsPanel" class="hidden"><div id="myProductsCount" class="my-products-count">Added Products: 0</div><div id="myProductsList">Loading...</div><button class="full gray" onclick="loadMyProducts()">Refresh Products</button></div>
  </section>
 
  <section id="ordersPage" class="page hidden">
@@ -624,20 +624,22 @@ async function addProduct(p,button){
 }
 
 window.loadMyProducts=async function(){
- const box=$("myProductsList");box.textContent="Loading...";
+ const box=$("myProductsList"),countBox=$("myProductsCount");box.textContent="Loading...";
  try{
   const {data,error}=await db.from("customer_products").select("*").eq("customer_id",currentUser.id).order("created_at",{ascending:false});
   if(error)throw error;
-  if(!data?.length){box.textContent="You have not added any products yet.";return}
+  const products=data||[];
+  if(countBox)countBox.textContent="Added Products: "+products.length;
+  if(!products.length){box.textContent="You have not added any products yet.";return}
   box.innerHTML="";
-  data.forEach(p=>{
+  products.forEach(p=>{
    const card=document.createElement("div");card.className="product-card";card.style.cursor="pointer";card.onclick=async()=>{let detail=p;if(p.product_id){const result=await db.from("products").select("*").eq("id",p.product_id).maybeSingle();if(!result.error&&result.data)detail=result.data;}openProductDetails(detail)};addProductImage(card,p.image||p.image_url);
    const title=document.createElement("h3");title.textContent=p.product_name||"Product";
    const cat=document.createElement("p");cat.className="small";cat.textContent=p.category||"";
    const price=document.createElement("p");price.className="product-price";price.textContent=money(p.price);
    card.append(title,cat,price);box.appendChild(card);
   });
- }catch(err){box.textContent="Products error: "+err.message}
+ }catch(err){box.textContent="Products error: "+err.message;if(countBox)countBox.textContent="Added Products: —"}
 };
 
 function orderPrice(o){
