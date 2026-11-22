@@ -466,20 +466,28 @@ async function dashboard(version){
 }
 
 /* PRODUCTS */
+function productImages(p){
+ const raw=p?.image;
+ if(Array.isArray(raw))return raw.filter(x=>typeof x==="string"&&x);
+ if(typeof raw==="string"&&raw.trim().startsWith("[")){try{const a=JSON.parse(raw);if(Array.isArray(a))return a.filter(x=>typeof x==="string"&&x)}catch(e){}}
+ const first=p?.image_url||((typeof raw==="string")?raw:"");
+ return first?[first]:[];
+}
 async function uploadProductImage(file){
- if(!file)return null;
+ if(!file)throw new Error("Product ki kam az kam 3 pictures select karein.");
  if(!file.type.startsWith("image/"))throw new Error("Sirf image select karein.");
- if(file.size>5*1024*1024)throw new Error("Image maximum 5 MB honi chahiye.");
+ if(file.size>5*1024*1024)throw new Error("Har image maximum 5 MB honi chahiye.");
  const path=(crypto.randomUUID?crypto.randomUUID():Date.now())+"-"+file.name.replace(/[^a-zA-Z0-9._-]/g,"_");
  const r=await db.storage.from(IMAGE_BUCKET).upload(path,file,{cacheControl:"3600",upsert:false});
  if(r.error)throw r.error;
  return db.storage.from(IMAGE_BUCKET).getPublicUrl(path).data.publicUrl;
 }
 function previewProductImage(){
- const file=document.getElementById("pimagefile")?.files?.[0],preview=document.getElementById("imagePreview");
+ const files=Array.from(document.getElementById("pimagefile")?.files||[]),preview=document.getElementById("imagePreview");
  if(!preview)return;
- if(!file){preview.style.display="none";return}
- preview.src=URL.createObjectURL(file);preview.style.display="block";
+ preview.innerHTML="";
+ files.forEach(file=>{const img=document.createElement("img");img.src=URL.createObjectURL(file);img.className="product";img.style.margin="5px";img.style.width="90px";img.style.height="90px";img.style.objectFit="cover";preview.appendChild(img)});
+ const count=document.getElementById("imageCount");if(count)count.textContent=files.length+" picture(s) selected";
 }
 async function productPage(version=pageVersion){
  await loadProducts();if(!pageIs("products",version))return;
@@ -488,25 +496,26 @@ async function productPage(version=pageVersion){
  <label>Product Name</label><input id="pname">
  <label>Price</label><input id="pprice" type="number" step="0.01" min="0">
  <label>Category</label><input id="pcat">
- <label>Choose Product Picture</label>
- <input id="pimagefile" type="file" accept="image/*" onchange="previewProductImage()">
- <img id="imagePreview" class="preview"><p class="muted">Image maximum size 5 MB.</p>
- <button class="green" id="addProductButton" onclick="addProduct()">Upload Picture & Add Product</button>
+ <label>Choose Product Pictures (minimum 3, you can select more)</label>
+ <input id="pimagefile" type="file" accept="image/*" multiple onchange="previewProductImage()">
+ <div id="imagePreview" style="display:flex;flex-wrap:wrap;gap:8px;margin:10px 0"></div><p id="imageCount" class="muted">At least 3 pictures required. Maximum 5 MB each.</p>
+ <button class="green" id="addProductButton" onclick="addProduct()">Upload Pictures & Add Product</button>
  </div><div class="panel"><h3>All Products</h3><div id="productList"></div></div>`,"products",version);
  renderProducts();
 }
 function renderProducts(){
  const target=document.getElementById("productList");if(!target||!target.isConnected)return;
- target.innerHTML="<div class='tablewrap'><table><tr><th>Picture</th><th>Name</th><th>Price</th><th>Category</th><th>Actions</th></tr>"+
- products.map(p=>`<tr><td>${imageOf(p)?`<img class="product" src="${esc(imageOf(p))}">`:"-"}</td><td>${esc(p.name)}</td><td>${esc(p.price)}</td><td>${esc(p.category)}</td><td><button onclick="editProduct('${esc(p.id)}')">Edit</button><button class="red" onclick="deleteProduct('${esc(p.id)}')">Delete</button></td></tr>`).join("")+"</table></div>";
+ target.innerHTML="<div class='tablewrap'><table><tr><th>Pictures</th><th>Name</th><th>Price</th><th>Category</th><th>Actions</th></tr>"+
+ products.map(p=>{const pics=productImages(p);return `<tr><td>${pics.length?pics.map(src=>`<img class="product" style="margin:2px" src="${esc(src)}">`).join(""):"-"}</td><td>${esc(p.name)}</td><td>${esc(p.price)}</td><td>${esc(p.category)}</td><td><button onclick="editProduct('${esc(p.id)}')">Edit</button><button class="red" onclick="deleteProduct('${esc(p.id)}')">Delete</button></td></tr>`}).join("")+"</table></div>";
 }
 async function addProduct(){
- const name=val("pname"),price=Number(val("pprice"));
+ const name=val("pname"),price=Number(val("pprice")),files=Array.from(document.getElementById("pimagefile")?.files||[]);
  if(!name||val("pprice")===""||!Number.isFinite(price)||price<0)return note("Product name aur valid price likhein.",true);
+ if(files.length<3)return note("Har product ke liye kam az kam 3 pictures select karein.",true);
  const b=document.getElementById("addProductButton");if(!b)return;b.disabled=true;
  try{
-  const image=await uploadProductImage(document.getElementById("pimagefile")?.files?.[0]);
-  const r=await db.from("products").insert({name,price,category:val("pcat")||null,image:image,image_url:image});
+  const images=[];for(const file of files)images.push(await uploadProductImage(file));
+  const r=await db.from("products").insert({name,price,category:val("pcat")||null,image:JSON.stringify(images),image_url:images[0]});
   if(r.error)throw r.error;note("Product successfully add ho gaya.");if(current==="products")await productPage();
  }catch(e){note(e.message,true)}finally{const btn=document.getElementById("addProductButton");if(btn)btn.disabled=false}
 }
@@ -515,15 +524,15 @@ async function editProduct(id){
  const name=prompt("Product name",p.name);if(name===null)return;
  const price=prompt("Price",p.price);if(price===null)return;
  const category=prompt("Category",p.category||"");if(category===null)return;
- let image=imageOf(p);
- if(confirm("Picture change karni hai? OK = new picture, Cancel = old picture.")){
-  const picker=document.createElement("input");picker.type="file";picker.accept="image/*";
-  const filePromise=new Promise(resolve=>{picker.onchange=()=>resolve(picker.files?.[0]||null);picker.oncancel=()=>resolve(null)});
-  picker.click();const file=await filePromise;if(!file)return;
-  try{image=await uploadProductImage(file)}catch(e){return note(e.message,true)}
+ let images=productImages(p);
+ if(confirm("Pictures replace karni hain? OK = kam az kam 3 new pictures select karein, Cancel = current pictures rakhein.")){
+  const picker=document.createElement("input");picker.type="file";picker.accept="image/*";picker.multiple=true;
+  const files=await new Promise(resolve=>{picker.onchange=()=>resolve(Array.from(picker.files||[]));picker.click()});
+  if(!files.length)return;if(files.length<3)return note("Kam az kam 3 pictures select karein.",true);
+  try{images=[];for(const file of files)images.push(await uploadProductImage(file))}catch(e){return note(e.message,true)}
  }
  const n=Number(price);if(!name.trim()||!Number.isFinite(n)||n<0)return note("Name aur price check karein.",true);
- const r=await db.from("products").update({name:name.trim(),price:n,category:category||null,image:image||null,image_url:image||null}).eq("id",id);
+ const r=await db.from("products").update({name:name.trim(),price:n,category:category||null,image:JSON.stringify(images),image_url:images[0]||null}).eq("id",id);
  if(r.error)return note(r.error.message,true);note("Product updated.");if(current==="products")await productPage();
 }
 async function deleteProduct(id){
