@@ -122,6 +122,12 @@ button,input,select,textarea{font-size:14px}
 
 /* Show three compact products per row in the shop */
 #shopList{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;align-items:start}
+.front-products{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;align-items:start}
+.front-products .product-card{min-width:0;margin:0;padding:7px;border-radius:10px;cursor:pointer}
+.front-products .product-image{height:92px;object-fit:cover}
+.front-products .product-card h3{font-size:12px;line-height:1.25;margin:5px 0}
+.front-products .product-price{font-size:14px;margin:5px 0}
+.front-products .product-card button{font-size:10px;padding:7px 3px;line-height:1.2}
 #myProductsList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:start}
 #shopList .product-card,#myProductsList .product-card{min-width:0;margin:0;padding:7px;border-radius:10px}
 #shopList .product-image{height:92px;object-fit:cover}
@@ -205,7 +211,8 @@ button,input,select,textarea{font-size:14px}
 <div id="dashboard" class="hidden">
  <section id="homePage" class="page">
   <div class="page-title"><h2>Dashboard</h2><p class="muted">Here's your account overview.</p></div>
-  <div class="stats">
+  <div class="card"><h3>Latest Products</h3><p class="muted">Recently added products in Smart Seller.</p><div id="homeFeaturedProducts" class="front-products"></div><button class="full" onclick="openPage('products')">View All Products</button></div>
+  <div class="stats>
    <div class="stat"><div class="stat-icon">💰</div><div class="stat-label">Wallet Balance</div><strong id="homeBalance" class="green"></strong><button class="green-btn" onclick="openPage('wallet')">View Wallet</button></div>
    <div class="stat"><div class="stat-icon">⭐</div><div class="stat-label">Credit Score</div><strong id="homeCredit" class="purple">-</strong><button onclick="toggleProfile()">View Profile</button></div>
    <div class="stat"><div class="stat-icon">🛒</div><div class="stat-label">Total Orders</div><strong id="homeOrders" class="blue"></strong><button onclick="openPage('orders')">View Orders</button></div>
@@ -569,7 +576,7 @@ window.openPage=function(page,skipDataLoad=false){
  ["home","products","orders","wallet","support","profile","about"].forEach(p=>$(p+"Page").classList.toggle("hidden",p!==page));
  document.querySelectorAll(".bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===page));
  if(!skipDataLoad){
-  if(page==="home")loadHomeData();
+  if(page==="home"){loadHomeData();loadHomeFeaturedProducts();}
   if(page==="products")showProductTab("shop");
   if(page==="orders"){loadOrders();}
   if(page==="wallet"){loadWallet();loadWithdrawals();resetWithdrawScreen()}
@@ -658,6 +665,31 @@ function addProductImage(container,value){
  img.src=url||"https://placehold.co/700x400/eaf0f8/405be8?text=Product";
  img.onerror=()=>{img.onerror=null;img.src="https://placehold.co/700x400/eaf0f8/405be8?text=Image+Unavailable"};
  container.appendChild(img);
+}
+
+async function loadHomeFeaturedProducts(){
+ const box=$("homeFeaturedProducts");if(!box||!currentUser?.id)return;
+ box.textContent="Loading products...";
+ try{
+  const [productsResult,addedResult]=await Promise.all([
+   db.from("products").select("id,name,description,price,category,image,image_url").eq("active",true).eq("is_active",true).order("created_at",{ascending:false}).limit(15),
+   db.from("customer_products").select("product_id").eq("customer_id",currentUser.id)
+  ]);
+  if(productsResult.error)throw productsResult.error;if(addedResult.error)throw addedResult.error;
+  const rows=productsResult.data||[];const addedIds=new Set((addedResult.data||[]).map(x=>String(x.product_id)));
+  if(!rows.length){box.textContent="No products available.";return;}
+  box.innerHTML="";
+  rows.forEach(p=>{
+   const card=document.createElement("div");card.className="product-card";card.onclick=()=>openProductDetails(p);addProductImage(card,p.image||p.image_url);
+   const title=document.createElement("h3");title.textContent=p.name||"Product";
+   const category=document.createElement("p");category.className="small";category.textContent=p.category||"";
+   const price=document.createElement("p");price.className="product-price";price.textContent="$"+money(p.price);
+   const btn=document.createElement("button");btn.type="button";btn.className="full kyc-action";
+   const alreadyAdded=addedIds.has(String(p.id));btn.textContent=alreadyAdded?"Added":"Add +";btn.disabled=alreadyAdded||!isKycApproved;
+   if(alreadyAdded)btn.classList.add("gray");btn.onclick=e=>{e.stopPropagation();addProduct(p,btn)};
+   card.append(title,category,price,btn);box.appendChild(card);
+  });
+ }catch(err){box.textContent="Products error: "+(err?.message||String(err));}
 }
 
 window.loadShop=async function(){
