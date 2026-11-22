@@ -548,7 +548,7 @@ async function refreshCustomerProducts(){
   if(r.error)throw r.error;
   const rows=r.data||[],groups={};rows.forEach(p=>(groups[String(p.customer_id)]??=[]).push(p));
   window.customerProductGroups=groups;
-  customerProductRows=rows.filter(x=>products.some(p=>String(p.id)===String(x.product_id)));
+  customerProductRows=rows.filter(x=>!x.ordered_at&&products.some(p=>String(p.id)===String(x.product_id)));
   if(current==="customer_products")renderCP(Object.keys(groups));
   if(current==="orders")renderOrderProductOptions();
  }catch(e){console.warn("Customer products refresh failed:",e.message)}
@@ -600,9 +600,9 @@ function calculateAvailableBalance(transactions){return calculateWalletSummary(t
 /* ORDERS */
 async function ordersPage(version=pageVersion){
  await Promise.all([loadCustomers(),loadProducts()]);
- const customerProductsResult=await db.from("customer_products").select("id,customer_id,product_id,product_name,price,category,image_url,created_at").order("created_at",{ascending:false}).limit(2000);
+ const customerProductsResult=await db.from("customer_products").select("id,customer_id,product_id,product_name,price,category,image_url,created_at,ordered_at").order("created_at",{ascending:false}).limit(2000);
  if(customerProductsResult.error)throw customerProductsResult.error;
- customerProductRows=(customerProductsResult.data||[]).filter(x=>products.some(p=>String(p.id)===String(x.product_id)));
+ customerProductRows=(customerProductsResult.data||[]).filter(x=>!x.ordered_at&&products.some(p=>String(p.id)===String(x.product_id)));
  if(!pageIs("orders",version))return;profitEdited=false;
  putContent(`
  <h2>Orders</h2>
@@ -661,15 +661,29 @@ async function sendOrder(){
  const unitPrice=Number(p.price);if(!Number.isFinite(unitPrice)||unitPrice<0)return note("Product ki price valid nahi hai.",true);
  const total=unitPrice*qty,profit=Number(val("oprofit"));if(!Number.isFinite(profit)||profit<0)return note("Profit amount check karein.",true);
  const b=document.getElementById("sendOrderButton");if(!b)return;b.disabled=true;
+ const orderedAt=new Date().toISOString();let orderId=null,claimed=false;
  try{
-  const o=await db.from("orders").insert({customer_id:cid,status:"pending",total_amount:total,admin_profit:profit}).select("id").single();if(o.error)throw o.error;
-  const it=await db.from("order_items").insert({order_id:o.data.id,product_id:p.product_id,product_name:p.product_name||"Product",quantity:qty,unit_price:unitPrice});
-  if(it.error){await db.from("orders").delete().eq("id",o.data.id);throw it.error}
+  const claim=await db.from("customer_products").update({ordered_at:orderedAt}).eq("id",p.id).is("ordered_at",null).select("id").maybeSingle();
+  if(claim.error)throw claim.error;
+  if(!claim.data){
+   customerProductRows=customerProductRows.filter(x=>String(x.id)!==String(p.id));renderOrderProductOptions();
+   throw new Error("This customer product has already been ordered and cannot be sent again.");
+  }
+  claimed=true;
+  const o=await db.from("orders").insert({customer_id:cid,status:"pending",total_amount:total,admin_profit:profit}).select("id").single();if(o.error)throw o.error;orderId=o.data.id;
+  const it=await db.from("order_items").insert({order_id:orderId,product_id:p.product_id,product_name:p.product_name||"Product",quantity:qty,unit_price:unitPrice});
+  if(it.error)throw it.error;
+  customerProductRows=customerProductRows.filter(x=>String(x.id)!==String(p.id));
   orderCustomerFilterId=String(cid);const filter=document.getElementById("orderCustomerFilter");if(filter)filter.value=orderCustomerFilterId;
-  note("Order sent. Product Price: $"+money(total)+" | Profit: $"+money(profit)+" | Expected Return: $"+money(total+profit));
+  note("Order sent. This product has been removed from the available list and cannot be ordered again.");
   document.getElementById("oproduct").value="";document.getElementById("oqty").value="1";profitEdited=false;calcOrder(true);
+  renderOrderProductOptions();
   if(current==="orders")await loadOrders();
- }catch(e){note("Order save error: "+e.message,true)}finally{const btn=document.getElementById("sendOrderButton");if(btn)btn.disabled=false}
+ }catch(e){
+  if(orderId)await db.from("orders").delete().eq("id",orderId);
+  if(claimed)await db.from("customer_products").update({ordered_at:null}).eq("id",p.id).eq("ordered_at",orderedAt);
+  note("Order save error: "+e.message,true);
+ }finally{const btn=document.getElementById("sendOrderButton");if(btn)btn.disabled=false}
 }
 async function creditCompletedOrder(orderId){
  const orderResult=await db.from("orders").select("*").eq("id",orderId).single();if(orderResult.error)throw orderResult.error;
