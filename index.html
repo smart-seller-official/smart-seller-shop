@@ -718,7 +718,7 @@ function orderProgress(status){
  });
 }
 
-async function getWalletSummary(){
+async async function getWalletSummary(){
  const [txResult,orderResult]=await Promise.all([
   db.from("wallet_transactions").select("amount,transaction_type,status").eq("customer_id",currentUser.id),
   db.from("orders").select("id,total_amount,product_price,status").eq("customer_id",currentUser.id)
