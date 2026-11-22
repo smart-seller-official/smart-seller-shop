@@ -422,7 +422,7 @@ async function loadDashboard(user){
  $("authArea").classList.add("hidden");
  $("dashboard").classList.remove("hidden");
  $("bottomNav").classList.remove("hidden");
- $("welcome").textContent=user.user_metadata?.full_name||user.email||"Customer";
+ if($("welcome"))$("welcome").textContent=user.user_metadata?.full_name||user.email||"Customer";
  const savedPage=localStorage.getItem("smartSeller_lastPage_"+user.id);
  const allowedPages=["home","products","orders","wallet","support","profile"];
  const initialPage=allowedPages.includes(savedPage)?savedPage:"home";
@@ -1036,8 +1036,8 @@ async function loadProfile(){
  }catch(err){console.error("Profile load:",err.message)}
  const fallback="data:image/svg+xml,"+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100%" height="100%" fill="#dbeafe"/><text x="50%" y="57%" text-anchor="middle" font-size="48">👤</text></svg>');
  $("profileAvatar").src=avatarUrl||fallback;
- $("welcomeAvatar").src=avatarUrl||fallback;
- $("welcome").textContent=$("profileName").textContent||currentUser.email||"Customer";
+ if($("welcomeAvatar"))$("welcomeAvatar").src=avatarUrl||fallback;
+ if($("welcome"))$("welcome").textContent=$("profileName").textContent||currentUser.email||"Customer";
 }
 
 
