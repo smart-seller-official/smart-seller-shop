@@ -877,7 +877,8 @@ async function withdrawStatus(id,status,customerId=null){
  const adminNote=prompt("Admin note (optional)","");if(adminNote===null)return;
  if(!confirm("Are you sure you want to "+(status==="completed"?"APPROVE":"REJECT")+" this withdrawal?"))return;
  try{
-  const r=await db.from("withdrawals").update({status:status,admin_note:adminNote}).eq("id",id).ilike("status","pending").select("id").maybeSingle();
+  const updateData={status:status,admin_note:adminNote};if(status==="completed")updateData.approved_at=new Date().toISOString();
+  const r=await db.from("withdrawals").update(updateData).eq("id",id).ilike("status","pending").select("id").maybeSingle();
   if(r.error)throw r.error;if(!r.data){note("This withdrawal has already been processed. No changes made.",true);if(current==="withdrawals")await withdrawalsPage();return}
   note(status==="completed"?"Withdrawal approved and marked Completed.":"Withdrawal rejected. Refund trigger has been activated.");if(customerId&&document.getElementById("customerProfileModal")?.style.display==="block")await openCustomerProfile(customerId);if(current==="withdrawals")await withdrawalsPage();
  }catch(e){note("Withdrawal error: "+e.message,true)}
