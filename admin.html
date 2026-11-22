@@ -147,7 +147,7 @@ const SUPABASE_KEY="sb_publishable_QrBZWYfua111aN24MjlXHw_c-Cf5yB1";
 const IMAGE_BUCKET="product-images";
 const KYC_BUCKET="kyc-documents";
 
-let db=null,customers=[],products=[],current="dashboard";
+let db=null,customers=[],products=[],customerProductRows=[],current="dashboard";
 let pageVersion=0,profitEdited=false;
 let activeSupportCustomerId=null;
 let supportMessages=[];
@@ -588,17 +588,20 @@ function calculateAvailableBalance(transactions){return calculateWalletSummary(t
 
 /* ORDERS */
 async function ordersPage(version=pageVersion){
- await Promise.all([loadCustomers(),loadProducts()]);if(!pageIs("orders",version))return;profitEdited=false;
+ await Promise.all([loadCustomers(),loadProducts()]);
+ const customerProductsResult=await db.from("customer_products").select("id,customer_id,product_id,product_name,price,category,image_url,created_at").order("created_at",{ascending:false}).limit(2000);
+ if(customerProductsResult.error)throw customerProductsResult.error;
+ customerProductRows=customerProductsResult.data||[];
+ if(!pageIs("orders",version))return;profitEdited=false;
  putContent(`
  <h2>Orders</h2>
  <div class="panel"><h3>Send Order to Customer</h3>
  <label>Customer</label>
- <select id="ocustomer" onchange="syncOrderCustomerFilter(this.value)">
+ <select id="ocustomer" onchange="syncOrderCustomerFilter(this.value);renderOrderProductOptions()">
  <option value="">All Customers</option>
  ${customers.map(c=>`<option value="${esc(c.id)}">${esc(c.full_name||c.email||c.id)} — ${esc(c.email||"")}</option>`).join("")}
  </select>
- <label>Product</label><select id="oproduct" onchange="calcOrder(true)"><option value="">Select product</option>
- ${products.map(p=>`<option value="${esc(p.id)}">${esc(p.name)} — $${money(p.price)}</option>`).join("")}</select>
+ <label>Customer Added Product</label><select id="oproduct" onchange="calcOrder(true)"><option value="">Select customer product</option></select>
  <label>Quantity</label><input id="oqty" type="number" min="1" value="1" oninput="calcOrder()">
  <label>Admin Profit (20% automatic - manually editable)</label>
  <input id="oprofit" type="number" min="0" step="0.01" value="0" oninput="profitEdited=true;calcOrder()">
@@ -619,17 +622,22 @@ async function ordersPage(version=pageVersion){
  <button class="gray" onclick="loadOrders()">Refresh</button><div id="orderList"></div><button type="button" class="gray" id="adminRecentOrdersToggle" style="width:100%;margin-top:12px" onclick="toggleAdminRecentOrders()">Recently Orders ▾</button><div id="adminRecentOrders" style="display:none;margin-top:10px"></div></div>`,"orders",version);
  const customerSelect=document.getElementById("ocustomer"),filterSelect=document.getElementById("orderCustomerFilter");
  if(customerSelect)customerSelect.value=orderCustomerFilterId;if(filterSelect)filterSelect.value=orderCustomerFilterId;
- calcOrder(true);await loadOrders();
+ renderOrderProductOptions();calcOrder(true);await loadOrders();
 }
 function syncOrderCustomerFilter(id){
  orderCustomerFilterId=String(id||"");const filter=document.getElementById("orderCustomerFilter");if(filter)filter.value=orderCustomerFilterId;loadOrders();
+}
+function renderOrderProductOptions(){
+ const select=document.getElementById("oproduct");if(!select)return;
+ const customerId=val("ocustomer"),rows=customerProductRows.filter(x=>!customerId||String(x.customer_id)===customerId);
+ select.innerHTML='<option value="">Select customer product</option>'+rows.map(x=>`<option value="${esc(x.id)}">${esc(x.product_name||"Product")} — ${money(x.price)}${customerId?"":" — "+esc(customerEmail(x.customer_id))}</option>`).join("");
 }
 function applyOrderCustomerFilter(id){
  orderCustomerFilterId=String(id||"");const customer=document.getElementById("ocustomer");if(customer)customer.value=orderCustomerFilterId;
  const filter=document.getElementById("orderCustomerFilter");if(filter)filter.value=orderCustomerFilterId;loadOrders();
 }
 function calcOrder(resetProfit=false){
- const p=products.find(x=>String(x.id)===val("oproduct")),qty=Number(val("oqty")),validQty=Number.isInteger(qty)&&qty>0?qty:0,productPrice=Number(p?.price||0)*validQty,profitInput=document.getElementById("oprofit");
+ const p=customerProductRows.find(x=>String(x.id)===val("oproduct")),qty=Number(val("oqty")),validQty=Number.isInteger(qty)&&qty>0?qty:0,productPrice=Number(p?.price||0)*validQty,profitInput=document.getElementById("oprofit");
  if(!profitInput)return;if(resetProfit||!profitEdited)profitInput.value=money(productPrice*.20);
  const profit=Number(profitInput.value||0);
  document.getElementById("productPrice").textContent="$"+money(productPrice);
@@ -637,14 +645,14 @@ function calcOrder(resetProfit=false){
  document.getElementById("expectedReturn").textContent="$"+money(productPrice+profit);
 }
 async function sendOrder(){
- const cid=val("ocustomer"),pid=val("oproduct"),qty=Number(val("oqty")),p=products.find(x=>String(x.id)===pid);
- if(!cid||!p||!Number.isInteger(qty)||qty<1)return note("Customer, product aur quantity select karein.",true);
+ const cid=val("ocustomer"),pid=val("oproduct"),qty=Number(val("oqty")),p=customerProductRows.find(x=>String(x.id)===pid);
+ if(!cid||!p||String(p.customer_id)!==cid||!Number.isInteger(qty)||qty<1)return note("Customer select karein aur us customer ka added product choose karein.",true);
  const unitPrice=Number(p.price);if(!Number.isFinite(unitPrice)||unitPrice<0)return note("Product ki price valid nahi hai.",true);
  const total=unitPrice*qty,profit=Number(val("oprofit"));if(!Number.isFinite(profit)||profit<0)return note("Profit amount check karein.",true);
  const b=document.getElementById("sendOrderButton");if(!b)return;b.disabled=true;
  try{
   const o=await db.from("orders").insert({customer_id:cid,status:"pending",total_amount:total,admin_profit:profit}).select("id").single();if(o.error)throw o.error;
-  const it=await db.from("order_items").insert({order_id:o.data.id,product_id:p.id,product_name:p.name,quantity:qty,unit_price:unitPrice});
+  const it=await db.from("order_items").insert({order_id:o.data.id,product_id:p.product_id,product_name:p.product_name||"Product",quantity:qty,unit_price:unitPrice});
   if(it.error){await db.from("orders").delete().eq("id",o.data.id);throw it.error}
   orderCustomerFilterId=String(cid);const filter=document.getElementById("orderCustomerFilter");if(filter)filter.value=orderCustomerFilterId;
   note("Order sent. Product Price: $"+money(total)+" | Profit: $"+money(profit)+" | Expected Return: $"+money(total+profit));
