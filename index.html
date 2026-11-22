@@ -895,7 +895,7 @@ function makeOrderCard(o){
  const card=document.createElement("div");card.className="data-card order-card";card.style.cursor="pointer";card.title="Click to view order tracking";card.onclick=()=>openOrderTracking(o);
  const head=document.createElement("div");head.className="order-head";
  const image=document.createElement("img");image.className="order-product-image";image.alt="Product";
- image.src=getProductImageUrl(o.product_image)||"https://placehold.co/120x120/eaf0f8/405be8?text=Product";
+ image.src=productImageList(o.product_image||o.image||o.image_url)[0]||"https://placehold.co/120x120/eaf0f8/405be8?text=Product";
  image.onerror=()=>{image.onerror=null;image.src="https://placehold.co/120x120/eaf0f8/405be8?text=Product"};
  const details=document.createElement("div");details.className="order-details";
  const title=document.createElement("h3");title.textContent=o.product_name||"Order";
@@ -944,7 +944,7 @@ window.loadOrders=async function(){
     const order=orders.find(x=>String(x.id)===String(item.order_id));
     if(order){
      const product=productRows.find(p=>String(p.id)===String(item.product_id));
-     order.product_image=product?(product.image||product.image_url||""):"";
+     order.product_image=item.product_image||item.image||item.image_url||(product&&(product.image||product.image_url))||order.product_image||order.image||order.image_url||"";
      order.product_name=order.product_name||(product&&product.name)||item.product_name||"Order";
     }
     const o=orders.find(x=>String(x.id)===String(item.order_id));
