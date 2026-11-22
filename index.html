@@ -681,8 +681,28 @@ async function pickupOrder(orderId,button,statusElement,order){
  }catch(err){button.disabled=false;button.textContent="PICKUP";alert("Pickup error: "+err.message)}
 }
 
+function openOrderTracking(o){
+ const previous=document.getElementById("orderTrackingOverlay");if(previous)previous.remove();
+ const overlay=document.createElement("div");overlay.id="orderTrackingOverlay";
+ Object.assign(overlay.style,{position:"fixed",inset:"0",background:"rgba(10,25,45,.72)",zIndex:"100000",display:"flex",alignItems:"center",justifyContent:"center",padding:"14px",overflowY:"auto"});
+ const panel=document.createElement("div");Object.assign(panel.style,{background:"#fff",borderRadius:"16px",padding:"18px",width:"100%",maxWidth:"540px",maxHeight:"92vh",overflowY:"auto",boxShadow:"0 18px 55px rgba(0,0,0,.25)"});
+ const close=document.createElement("button");close.className="full gray";close.textContent="Close";close.onclick=()=>overlay.remove();panel.appendChild(close);
+ const heading=document.createElement("h2");heading.textContent="ORDER TRACKING";heading.style.letterSpacing="1px";panel.appendChild(heading);
+ const id=document.createElement("p");id.className="small";id.textContent="Order ID: "+(o.id||"-");panel.appendChild(id);
+ const images=productImageList(o.product_image||o.image||o.image_url);
+ if(images.length){const gallery=document.createElement("div");Object.assign(gallery.style,{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:"8px",margin:"12px 0"});images.forEach((url,i)=>{const img=document.createElement("img");img.src=url;img.alt="Order product "+(i+1);Object.assign(img.style,{width:"100%",height:"145px",objectFit:"cover",borderRadius:"10px"});gallery.appendChild(img)});panel.appendChild(gallery)}
+ const name=document.createElement("h3");name.textContent=o.product_name||"Order";panel.appendChild(name);
+ const status=document.createElement("p");status.className="status shipped";status.textContent="CURRENT STATUS: "+orderStatus(o);panel.appendChild(status);
+ const progress=document.createElement("div");progress.className="order-progress";orderProgress(o.status).forEach(step=>progress.appendChild(step));panel.appendChild(progress);
+ const note=document.createElement("p");note.className="small";note.textContent="Status is updated by the seller as your order moves through each stage.";panel.appendChild(note);
+ const info=document.createElement("div");Object.assign(info.style,{borderTop:"1px solid #e5eaf1",marginTop:"14px",paddingTop:"12px",lineHeight:"1.9"});
+ const rows=[["Quantity",safeText(o.quantity)],["Product amount",money(orderPrice(o))],["Expected profit",money(orderProfit(o))],["Expected total return",money(orderPrice(o)+orderProfit(o))],["Order date",o.created_at?new Date(o.created_at).toLocaleString():"-"]];
+ rows.forEach(([label,value])=>{const row=document.createElement("div");row.style.display="flex";row.style.justifyContent="space-between";row.style.gap="12px";const l=document.createElement("span");l.textContent=label;const v=document.createElement("strong");v.textContent=value;row.append(l,v);info.appendChild(row)});
+ panel.appendChild(info);
+ overlay.addEventListener("click",e=>{if(e.target===overlay)overlay.remove()});overlay.appendChild(panel);document.body.appendChild(overlay);
+}
 function makeOrderCard(o){
- const card=document.createElement("div");card.className="data-card order-card";
+ const card=document.createElement("div");card.className="data-card order-card";card.style.cursor="pointer";card.title="Click to view order tracking";card.onclick=()=>openOrderTracking(o);
  const head=document.createElement("div");head.className="order-head";
  const image=document.createElement("img");image.className="order-product-image";image.alt="Product";
  image.src=getProductImageUrl(o.product_image)||"https://placehold.co/120x120/eaf0f8/405be8?text=Product";
@@ -708,7 +728,7 @@ function makeOrderCard(o){
   const button=document.createElement("button");
   button.className="full green-btn kyc-action";button.textContent="PICKUP";
   button.disabled=!isKycApproved;
-  button.onclick=()=>pickupOrder(o.id,button,status,o);
+  button.onclick=(event)=>{event.stopPropagation();pickupOrder(o.id,button,status,o)};
   card.appendChild(button);
  }
  return card;
@@ -734,7 +754,7 @@ window.loadOrders=async function(){
     const order=orders.find(x=>String(x.id)===String(item.order_id));
     if(order){
      const product=productRows.find(p=>String(p.id)===String(item.product_id));
-     order.product_image=product?(product.image_url||product.image||""):"";
+     order.product_image=product?(product.image||product.image_url||""):"";
      order.product_name=order.product_name||(product&&product.name)||item.product_name||"Order";
     }
     const o=orders.find(x=>String(x.id)===String(item.order_id));
