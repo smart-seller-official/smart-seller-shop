@@ -427,8 +427,16 @@ async function loadDashboard(user){
  await loadProfile();
  await loadKyc(user);
  updateKycLocks();
- await loadHomeData();
  openPage("home");
+ // Load every customer section after the saved login session is restored.
+ // Each section keeps its own error message if its data cannot be fetched.
+ await Promise.allSettled([
+  loadShop(),
+  loadMyProducts(),
+  loadOrders(),
+  loadWithdrawals(),
+  loadSupport()
+ ]);
 }
 
 function customerBadgeKey(kind){return "smartSeller_"+kind+"_seen_"+currentUser.id}
