@@ -443,15 +443,11 @@ async function loadDashboard(user){
   loadWithdrawals(),
   loadSupport()
  ];
- const results=await Promise.allSettled(tasks);
- results.forEach((result,index)=>{
-  if(result.status==="rejected")console.error("Customer data load failed ("+index+"):",result.reason);
- });
- // Refresh all customer sections once more after 5 seconds. This gives
- // slower initial session/database requests time to become available.
+ // Schedule the independent dashboard retry immediately. Do not wait for
+ // every other page (shop, support, KYC, etc.) to finish before scheduling it.
  setTimeout(async()=>{
   if(!currentUser||currentUser.id!==user.id)return;
-  const retryTasks=[
+  await Promise.allSettled([
    loadProfile(),
    loadKyc(user).then(()=>updateKycLocks()),
    loadHomeData(),
@@ -460,9 +456,12 @@ async function loadDashboard(user){
    loadOrders(),
    loadWithdrawals(),
    loadSupport()
-  ];
-  await Promise.allSettled(retryTasks);
+  ]);
  },5000);
+ const results=await Promise.allSettled(tasks);
+ results.forEach((result,index)=>{
+  if(result.status==="rejected")console.error("Customer data load failed ("+index+"):",result.reason);
+ });
 }
 
 function customerBadgeKey(kind){return "smartSeller_"+kind+"_seen_"+currentUser.id}
