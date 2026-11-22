@@ -1022,9 +1022,12 @@ window.loadWithdrawalStatus=async function(){
   const status=String(data.status||"").trim().toLowerCase();
   if(status==="pending"){
    banner.textContent="Withdrawal Pending";banner.className="withdrawal-status-banner";
-  }else if(status==="completed"&&data.approved_at&&Date.now()-new Date(data.approved_at).getTime()<24*60*60*1000){
+  }else if(["completed","approved"].includes(status)){
+   const approvedTime=data.approved_at||data.created_at;
+   const elapsed=Date.now()-new Date(approvedTime).getTime();
+   if(!approvedTime||!Number.isFinite(elapsed)||elapsed>=24*60*60*1000)return;
    banner.textContent="Withdraw Complete Successful";banner.className="withdrawal-status-banner complete";
-   const remaining=24*60*60*1000-(Date.now()-new Date(data.approved_at).getTime());
+   const remaining=24*60*60*1000-elapsed;
    window.setTimeout(()=>{banner.classList.add("hidden");banner.textContent="";},Math.max(0,remaining));
   }
  }catch(err){console.error("Withdrawal status:",err.message)}
