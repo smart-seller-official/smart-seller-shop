@@ -584,11 +584,20 @@ async function loadDashboard(user){
  });
 }
 
-function customerBadgeKey(kind){return "smartSeller_"+kind+"_seen_"+currentUser.id}
-function initCustomerBadgeTracking(){
+function customerBadgeKey(kind){return "smartSeller_"+kind+"_seen_v2_"+currentUser.id}
+async function initCustomerBadgeTracking(){
  if(!currentUser)return;
  ["orders","messages"].forEach(kind=>{const key=customerBadgeKey(kind);if(!localStorage.getItem(key))localStorage.setItem(key,new Date().toISOString())});
- refreshCustomerBadges();
+ // Start with the latest existing admin reply as the read baseline.
+ // Only admin messages arriving after this point count as unread.
+ try{
+  const latest=await db.from("support_chat_messages").select("created_at,sender,sender_role").eq("customer_id",currentUser.id).order("created_at",{ascending:false}).limit(200);
+  if(latest.error)throw latest.error;
+  const lastAdmin=(latest.data||[]).find(m=>String(m.sender_role||m.sender||"").toLowerCase()==="admin");
+  if(lastAdmin?.created_at)localStorage.setItem(customerBadgeKey("messages"),lastAdmin.created_at);
+  else localStorage.setItem(customerBadgeKey("messages"),new Date().toISOString());
+ }catch(e){console.warn("Initialize unread messages:",e.message)}
+ await refreshCustomerBadges();
  if(customerBadgeTimer)clearInterval(customerBadgeTimer);
  // Badge refresh is handled by the shared dashboard poll below.
 }
