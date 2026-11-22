@@ -734,7 +734,7 @@ async function loadOrders(){
  const selectedBalance=selectedCustomer?(balanceByCustomer[selectedCustomer]||0):totalCustomerAvailableBalance;
  const pe=document.getElementById("pendingOrdersTotal"),be=document.getElementById("customerAvailableBalanceTotal");if(pe)pe.textContent="$"+money(pendingTotal);if(be)be.textContent="$"+money(selectedBalance);
  if(!pageIs("orders",version))return;const list=document.getElementById("orderList");if(!list||!list.isConnected)return;
- const statuses=[["pending","Pickup"],["processing","Processing"],["shipping","Shipping"],["completed","Complete"],["cancelled","Cancel"]];
+ const statuses=[["pending","Pickup"],["picked","Picked"],["processing","Processing"],["shipping","Shipping"],["completed","Complete"],["cancelled","Cancel"]];
  const renderOrderTable=rows=>rows.length
  ?"<div class='tablewrap'><table><tr><th>Customer</th><th>Customer Available Balance</th><th>Order ID</th><th>Product / Quantity</th><th>Product Price</th><th>Profit</th><th>Expected Return</th><th>Status</th><th>Update</th></tr>"+
  rows.map(x=>{
@@ -752,7 +752,7 @@ function toggleAdminRecentOrders(){
 }
 async function updateOrder(id){
  const select=document.getElementById("orderstatus_"+id);if(!select)return note("Order status select nahi mila.",true);
- const status=select.value;if(!["pending","processing","shipping","completed","cancelled"].includes(status))return note("Invalid order status.",true);
+ const status=select.value;if(!["pending","picked","processing","shipping","completed","cancelled"].includes(status))return note("Invalid order status.",true);
  select.disabled=true;
  try{const r=await db.from("orders").update({status}).eq("id",id).select("*").single();if(r.error)throw r.error;if(status==="completed"){await creditCompletedOrder(id);note("Order completed. Wallet credit check ho gaya.")}else note("Order successfully "+status+" ho gaya.");if(current==="orders")await loadOrders()}
  catch(e){note("Order save error: "+e.message,true)}finally{const s=document.getElementById("orderstatus_"+id);if(s)s.disabled=false}
