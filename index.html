@@ -1475,7 +1475,26 @@ setInterval(()=>{
 <script>
 function googleTranslateElementInit(){
  if(window.google&&google.translate&&google.translate.TranslateElement){
+  const host=document.getElementById('google_translate_element');
+  const showEnglishLanguageNames=()=>{
+   if(!host)return;
+   const select=host.querySelector('select.goog-te-combo');
+   if(!select)return;
+   const englishNames=new Intl.DisplayNames(['en'],{type:'language'});
+   Array.from(select.options).forEach(option=>{
+    if(!option.value){option.textContent='Select Language';return;}
+    const code=option.value.replace(/_/g,'-');
+    try{
+     const name=englishNames.of(code);
+     if(name)option.textContent=name;
+    }catch(error){}
+   });
+  };
   new google.translate.TranslateElement({pageLanguage:'en',autoDisplay:false},'google_translate_element');
+  if(host){
+   new MutationObserver(showEnglishLanguageNames).observe(host,{childList:true,subtree:true});
+   showEnglishLanguageNames();
+  }
  }
 }
 </script>
