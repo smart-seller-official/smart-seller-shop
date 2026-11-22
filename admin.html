@@ -894,9 +894,10 @@ async function kycPage(version=pageVersion){
  target.innerHTML=(r.data||[]).map(x=>{
   const pending=String(x.status||"").toLowerCase().trim()==="pending",customer=customers.find(c=>String(c.id)===String(x.customer_id));
   return `<div class="kyc-row">
-   <span class="kyc-customer" onclick="openCustomerProfile('${esc(x.customer_id)}')">${esc(customer?.full_name||"Name not available")} — ${esc(customer?.email||"Email not available")}</span>
+   <span class="kyc-customer" onclick="openKycCustomer('${esc(x.customer_id)}')">${esc(customer?.full_name||"Name not available")} — ${esc(customer?.email||"Email not available")}</span>
    <span>${esc(x.document_type||"Not available")}</span>
    <b class="${pending?"ok":"muted"}">${esc(x.status||"Pending")}</b>
+   <button class="gray" onclick="openKycCustomer('${esc(x.customer_id)}')">View ID Card</button>
    ${pending?`<button class="green" onclick="kycStatus('${esc(x.id)}','approved')">Approve</button><button class="red" onclick="kycStatus('${esc(x.id)}','rejected')">Reject</button>`:`<span class="muted">Decision already made</span>`}
   </div>`;
  }).join("")||"No KYC requests.";
