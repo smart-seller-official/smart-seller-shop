@@ -1228,27 +1228,19 @@ async function loadProfile(){
   const {data,error}=await db.from("profiles").select("*").eq("id",currentUser.id).maybeSingle();
   if(error)throw error;
   if(data){
-   // Credit score is controlled only by the admin-approved KYC status.
-   let kycApprovedForScore=false;
-   try{
-    const {data:kycRows,error:kycScoreError}=await db.from("kyc_submissions").select("status,created_at").eq("customer_id",currentUser.id).order("created_at",{ascending:false});
-    if(kycScoreError)throw kycScoreError;
-    kycApprovedForScore=(kycRows||[]).some(row=>{
-     const s=String(row.status||"").trim().toLowerCase().replace(/[^a-z]/g,"");
-     return s.includes("approv")||s.includes("aproved")||s.includes("aproov")||s.includes("verif");
-    });
-   }catch(kycScoreError){console.error("Credit score KYC check:",kycScoreError.message)}
-   const scorePercent=kycApprovedForScore?100:0;
+   // Always show the exact credit score set by the admin in profiles.credit_score.
+   const rawCreditScore=Number(data.credit_score??0);
+   const scorePercent=Number.isFinite(rawCreditScore)?Math.max(0,Math.min(100,rawCreditScore)):0;
    $("profileName").textContent=data.full_name||currentUser.user_metadata?.full_name||"-";
    $("editFullName").value=data.full_name||currentUser.user_metadata?.full_name||"";
    $("editPhone").value=data.phone||currentUser.user_metadata?.phone||"";
    avatarUrl=data.avatar||"";
-   $("profileCredit").textContent=scorePercent===0?"00%":"100%";
+   $("profileCredit").textContent=String(scorePercent).padStart(2,"0")+"%";
    if($("profileCreditNeedle"))$("profileCreditNeedle").style.transform="rotate("+(-90+(scorePercent*1.8))+"deg)";
-   $("homeCredit").textContent=scorePercent===0?"00%":"100%";
-   if($("scoreDisplay"))$("scoreDisplay").textContent=scorePercent===0?"00%":"100%";
+   $("homeCredit").textContent=String(scorePercent).padStart(2,"0")+"%";
+   if($("scoreDisplay"))$("scoreDisplay").textContent=String(scorePercent).padStart(2,"0")+"%";
    if($("scoreFill"))$("scoreFill").style.width=scorePercent+"%";
-   if($("walletScoreDisplay"))$("walletScoreDisplay").textContent=scorePercent===0?"00%":"100%";
+   if($("walletScoreDisplay"))$("walletScoreDisplay").textContent=String(scorePercent).padStart(2,"0")+"%";
    if($("walletScoreFill"))$("walletScoreFill").style.width=scorePercent+"%";
   }
  }catch(err){console.error("Profile load:",err.message)}
