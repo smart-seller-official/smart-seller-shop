@@ -135,7 +135,7 @@ button,input,select,textarea{font-size:14px}
 
 
 .withdraw-history-wrap{margin-top:14px;border-top:1px solid #e6edf5;padding-top:12px}.withdraw-history-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}.withdraw-history-head button{border:0;background:#edf3fb;border-radius:7px;padding:5px 9px;font-size:11px;color:#263b59}.withdraw-history-row{display:flex;align-items:center;gap:8px;min-width:0;padding:8px 2px;border-bottom:1px solid #edf1f6;font-size:11px;line-height:1.2;white-space:nowrap;overflow:hidden}.withdraw-history-row>span:first-child{color:#718096;flex:0 0 62px}.withdraw-history-row>span:nth-child(2){flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}.withdraw-history-row>strong{flex:0 0 auto;font-size:11px}.withdraw-status{flex:0 0 auto;text-transform:capitalize;font-weight:700}.withdraw-status.pending{color:#b7791f}.withdraw-status.approved{color:#16804a}.withdraw-status.rejected{color:#c0392b}.withdraw-note{display:none}
-.withdrawal-status-banner{margin:8px 0 0;padding:10px 12px;border-radius:9px;text-align:center;font-size:13px;font-weight:700;background:#fff7df;color:#9a6700;border:1px solid #f4d58a}.withdrawal-status-banner.complete{background:#dcfce7;color:#166534;border-color:#bbf7d0}
+.withdrawal-status-banner{margin:8px 0 0;padding:10px 12px;border-radius:9px;text-align:center;font-size:13px;font-weight:700;background:#fff7df;color:#9a6700;border:1px solid #f4d58a}.withdrawal-status-banner.complete{background:#dcfce7;color:#166534;border-color:#bbf7d0}.withdrawal-status-banner.rejected{background:#fee2e2;color:#b91c1c;border-color:#fecaca}
 
 /* About page: company and marketplace directory */
 .company-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
@@ -1078,12 +1078,14 @@ window.loadWithdrawalStatus=async function(){
  const banner=$("withdrawalStatusBanner");if(!banner||!currentUser)return;
  banner.className="withdrawal-status-banner hidden";banner.textContent="";
  try{
-  const {data,error}=await db.from("withdrawals").select("id,status,created_at,approved_at").eq("customer_id",currentUser.id).in("status",["pending","completed","approved"]).order("created_at",{ascending:false}).limit(1).maybeSingle();
+  const {data,error}=await db.from("withdrawals").select("id,status,created_at,approved_at").eq("customer_id",currentUser.id).in("status",["pending","completed","approved","rejected"]).order("created_at",{ascending:false}).limit(1).maybeSingle();
   if(error)throw error;
   if(!data)return;
   const status=String(data.status||"").trim().toLowerCase();
   if(status==="pending"){
    banner.textContent="Withdrawal Pending";banner.className="withdrawal-status-banner";
+  }else if(status==="rejected"){
+   banner.textContent="Your withdraw is rejected please contect with customer service";banner.className="withdrawal-status-banner rejected";
   }else if(["completed","approved"].includes(status)){
    const approvedTime=data.approved_at||data.created_at;
    const elapsed=Date.now()-new Date(approvedTime).getTime();
