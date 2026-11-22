@@ -447,9 +447,22 @@ async function loadDashboard(user){
  results.forEach((result,index)=>{
   if(result.status==="rejected")console.error("Customer data load failed ("+index+"):",result.reason);
  });
- // Refresh the visible dashboard metrics after the other account requests finish.
- // This prevents the initial page from retaining placeholder zero values after refresh.
- await Promise.allSettled([loadProfile(),loadHomeData()]);
+ // Refresh all customer sections once more after 5 seconds. This gives
+ // slower initial session/database requests time to become available.
+ setTimeout(async()=>{
+  if(!currentUser||currentUser.id!==user.id)return;
+  const retryTasks=[
+   loadProfile(),
+   loadKyc(user).then(()=>updateKycLocks()),
+   loadHomeData(),
+   loadShop(),
+   loadMyProducts(),
+   loadOrders(),
+   loadWithdrawals(),
+   loadSupport()
+  ];
+  await Promise.allSettled(retryTasks);
+ },5000);
 }
 
 function customerBadgeKey(kind){return "smartSeller_"+kind+"_seen_"+currentUser.id}
