@@ -421,22 +421,26 @@ async function loadDashboard(user){
  isKycApproved=false;
  initCustomerBadgeTracking();
  $("authArea").classList.add("hidden");
- $("dashboard").classList.remove("hidden");
- $("bottomNav").classList.remove("hidden");
+ // Keep the dashboard hidden until its saved-session data has finished loading.
+ $("dashboard").classList.add("hidden");
+ $("bottomNav").classList.add("hidden");
  $("welcome").textContent=user.user_metadata?.full_name||user.email||"Customer";
  await loadProfile();
  await loadKyc(user);
  updateKycLocks();
- openPage("home");
- // Load every customer section after the saved login session is restored.
- // Each section keeps its own error message if its data cannot be fetched.
+ // Select Home without starting a second, unawaited data request.
+ openPage("home",true);
+ // Wait for Home and every customer section before showing the dashboard.
  await Promise.allSettled([
+  loadHomeData(),
   loadShop(),
   loadMyProducts(),
   loadOrders(),
   loadWithdrawals(),
   loadSupport()
  ]);
+ $("dashboard").classList.remove("hidden");
+ $("bottomNav").classList.remove("hidden");
 }
 
 function customerBadgeKey(kind){return "smartSeller_"+kind+"_seen_"+currentUser.id}
@@ -477,16 +481,18 @@ async function refreshCustomerBadges(){
  }catch(e){console.warn("Notification badge:",e.message)}
 }
 
-window.openPage=function(page){
+window.openPage=function(page,skipDataLoad=false){
  document.body.classList.toggle("chat-open",page==="support");
  ["home","products","orders","wallet","support","profile"].forEach(p=>$(p+"Page").classList.toggle("hidden",p!==page));
  document.querySelectorAll(".bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===page));
- if(page==="home")loadHomeData();
- if(page==="products")showProductTab("shop");
- if(page==="orders"){loadOrders();}
- if(page==="wallet"){loadWallet();loadWithdrawals();resetWithdrawScreen()}
- if(page==="support"){markCustomerBadgeSeen("messages");loadSupport();}
- if(page==="profile"){loadProfile();loadKyc(currentUser);}
+ if(!skipDataLoad){
+  if(page==="home")loadHomeData();
+  if(page==="products")showProductTab("shop");
+  if(page==="orders"){loadOrders();}
+  if(page==="wallet"){loadWallet();loadWithdrawals();resetWithdrawScreen()}
+  if(page==="support"){markCustomerBadgeSeen("messages");loadSupport();}
+  if(page==="profile"){loadProfile();loadKyc(currentUser);}
+ }
 };
 
 window.toggleProfile=function(){
