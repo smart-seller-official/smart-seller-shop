@@ -945,9 +945,9 @@ async function kycPage(version=pageVersion){
  if(r.error)throw r.error;if(!pageIs("kyc_submissions",version))return;
  putContent(`<h2>KYC Requests</h2><button class="gray" onclick="kycPage()">Refresh</button><div id="kycList"></div>`,"kyc_submissions",version);
  const target=document.getElementById("kycList");if(!target)return;
- const pendingRows=(r.data||[]).filter(x=>String(x.status||"").trim().toLowerCase()==="pending");
- target.innerHTML=pendingRows.map(x=>{
-  const pending=true,customer=customers.find(c=>String(c.id)===String(x.customer_id));
+ const allRows=r.data||[];
+ target.innerHTML=allRows.map(x=>{
+  const pending=String(x.status||"").trim().toLowerCase()==="pending",customer=customers.find(c=>String(c.id)===String(x.customer_id));
   return `<div class="kyc-row">
    <span class="kyc-customer" onclick="openKycCustomer('${esc(x.customer_id)}')">${esc(customer?.full_name||"Name not available")} — ${esc(customer?.email||"Email not available")}</span>
    <span>${esc(x.document_type||"Not available")}</span>
@@ -955,7 +955,7 @@ async function kycPage(version=pageVersion){
    <button class="gray" onclick="openKycCustomer('${esc(x.customer_id)}')">View ID Card</button>
    ${pending?`<button class="green" onclick="kycStatus('${esc(x.id)}','approved')">Approve</button><button class="red" onclick="kycStatus('${esc(x.id)}','rejected')">Reject</button>`:`<span class="muted">Decision already made</span>`}
   </div>`;
- }).join("")||"No pending KYC requests.";
+ }).join("")||"No KYC requests found.";
 }
 async function kycStatus(id,status){
  if(!["approved","rejected"].includes(status))return note("Invalid KYC status.",true);
