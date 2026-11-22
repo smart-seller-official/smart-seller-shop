@@ -214,6 +214,7 @@ button,input,select,textarea{font-size:14px}
  #dashboard button{border-radius:10px}
 }
 
+.logo{display:flex;align-items:center;gap:9px}.brand-mark{width:32px;height:32px;object-fit:contain;flex:0 0 32px;filter:drop-shadow(0 2px 5px #d9ad4870)}
 .logo{font-family:Georgia,'Times New Roman',serif!important;font-size:25px!important;font-weight:900!important;letter-spacing:1.5px!important;background:linear-gradient(90deg,#ffd166 0%,#ff7b54 24%,#f15bb5 48%,#7b9cff 72%,#55e6c1 100%);-webkit-background-clip:text;background-clip:text;color:transparent!important;-webkit-text-stroke:.35px #fff;text-shadow:0 2px 12px #f5b94255;position:relative;line-height:1.15;padding-bottom:5px}
 .logo:after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;border-radius:5px;background:linear-gradient(90deg,#ffd166,#ff7b54,#f15bb5,#7b9cff,#55e6c1);box-shadow:0 0 9px #f5b94266}
 .logo span{color:#d8b66b!important}
@@ -221,7 +222,7 @@ button,input,select,textarea{font-size:14px}
 </head>
 <body>
 <header>
- <div class="logo">SMART SELLER SHOP</div>
+ <div class="logo"><img src="/favicon.svg" alt="" class="brand-mark">SMART SELLER SHOP</div>
  <button class="menu-btn" onclick="toggleProfile()" aria-label="Profile menu">☰</button>
 </header>
 <main>
