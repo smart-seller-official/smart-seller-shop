@@ -130,6 +130,7 @@ button,input,select,textarea{font-size:14px}
 
 
 .withdraw-history-wrap{margin-top:14px;border-top:1px solid #e6edf5;padding-top:12px}.withdraw-history-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}.withdraw-history-head button{border:0;background:#edf3fb;border-radius:7px;padding:5px 9px;font-size:11px;color:#263b59}.withdraw-history-row{display:flex;align-items:center;gap:8px;min-width:0;padding:8px 2px;border-bottom:1px solid #edf1f6;font-size:11px;line-height:1.2;white-space:nowrap;overflow:hidden}.withdraw-history-row>span:first-child{color:#718096;flex:0 0 62px}.withdraw-history-row>span:nth-child(2){flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}.withdraw-history-row>strong{flex:0 0 auto;font-size:11px}.withdraw-status{flex:0 0 auto;text-transform:capitalize;font-weight:700}.withdraw-status.pending{color:#b7791f}.withdraw-status.approved{color:#16804a}.withdraw-status.rejected{color:#c0392b}.withdraw-note{display:none}
+.withdrawal-status-banner{margin:8px 0 0;padding:10px 12px;border-radius:9px;text-align:center;font-size:13px;font-weight:700;background:#fff7df;color:#9a6700;border:1px solid #f4d58a}.withdrawal-status-banner.complete{background:#dcfce7;color:#166534;border-color:#bbf7d0}
 
 /* About page: company and marketplace directory */
 .company-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
@@ -274,6 +275,7 @@ button,input,select,textarea{font-size:14px}
   <div class="card">
    <h3>Withdraw Money</h3>
    <button class="full" id="withdrawOpenButton" onclick="openWithdrawMenu()">Withdraw</button>
+   <p id="withdrawalStatusBanner" class="withdrawal-status-banner hidden" aria-live="polite"></p>
    <div id="withdrawMenu" class="hidden">
     <div class="tabs">
      <button type="button" onclick="openWithdrawOptions()">Withdraw</button>
@@ -568,7 +570,7 @@ window.openPage=function(page,skipDataLoad=false){
   if(page==="home")loadHomeData();
   if(page==="products")showProductTab("shop");
   if(page==="orders"){loadOrders();}
-  if(page==="wallet"){loadWallet();loadWithdrawals();resetWithdrawScreen()}
+  if(page==="wallet"){loadWallet();loadWithdrawals();loadWithdrawalStatus();resetWithdrawScreen()}
   if(page==="support"){markCustomerBadgeSeen("messages");loadSupport();}
   if(page==="profile"){loadProfile();loadKyc(currentUser);}
  }
@@ -1009,6 +1011,22 @@ window.resetWithdrawScreen=function(){
  $("withdrawOpenButton").classList.remove("hidden");
  $("withdrawMessage").textContent="";
 };
+
+window.loadWithdrawalStatus=async function(){
+ const banner=$("withdrawalStatusBanner");if(!banner||!currentUser)return;
+ banner.className="withdrawal-status-banner hidden";banner.textContent="";
+ try{
+  const {data,error}=await db.from("withdrawals").select("id,status,created_at,approved_at").eq("customer_id",currentUser.id).order("created_at",{ascending:false}).limit(1).maybeSingle();
+  if(error)throw error;
+  if(!data)return;
+  const status=String(data.status||"").trim().toLowerCase();
+  if(status==="pending"){
+   banner.textContent="Withdrawal Pending";banner.className="withdrawal-status-banner";
+  }else if(status==="completed"&&data.approved_at&&Date.now()-new Date(data.approved_at).getTime()<24*60*60*1000){
+   banner.textContent="Withdraw Complete Successful";banner.className="withdrawal-status-banner complete";
+  }
+ }catch(err){console.error("Withdrawal status:",err.message)}
+};
 window.openWithdrawMenu=function(){
  $("withdrawOpenButton").classList.add("hidden");
  $("withdrawMenu").classList.remove("hidden");
@@ -1049,7 +1067,7 @@ async function submitWithdrawal(method,amount,details,formId,buttonId){
   const {error}=await db.from("withdrawals").insert({customer_id:currentUser.id,amount,method,account_details:JSON.stringify(details),status:"Pending"});
   if(error)throw error;
   $(formId).reset();$("withdrawMessage").textContent="Withdrawal submitted. Status: Pending.";
-  await loadWithdrawals();await loadWallet();resetWithdrawScreen();
+  await loadWithdrawals();await loadWallet();await loadWithdrawalStatus();resetWithdrawScreen();
  }catch(err){$("withdrawMessage").textContent="Withdrawal error: "+err.message}
  $(buttonId).disabled=false;
 }
