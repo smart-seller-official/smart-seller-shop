@@ -632,7 +632,7 @@ async function addProduct(p,button){
 window.loadMyProducts=async function(){
  const box=$("myProductsList"),countBox=$("myProductsCount");box.textContent="Loading...";
  try{
-  const {data,error}=await db.from("customer_products").select("*").eq("customer_id",currentUser.id).order("created_at",{ascending:false});
+  const {data,error}=await db.from("customer_products").select("*").eq("customer_id",currentUser.id).is("ordered_at",null).order("created_at",{ascending:false});
   if(error)throw error;
   const products=data||[];
   if(countBox)countBox.textContent="Added Products: "+products.length;
