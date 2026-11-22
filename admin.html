@@ -496,7 +496,7 @@ async function dashboard(version){
    const r=await db.from(table).select("sender_role,sender,read_at").limit(2000);
    if(r.error)error=true;
    else displayCount=(r.data||[]).filter(m=>String(m.sender_role||m.sender||"").toLowerCase()==="customer"&&!m.read_at).length;
-  }else if(table==="kyc_submissions"){
+  }else if(table==="kyc_submissions"||table==="withdrawals"){
    const r=await db.from(table).select("status").limit(2000);
    if(r.error)error=true;
    else displayCount=(r.data||[]).filter(x=>String(x.status||"").trim().toLowerCase()==="pending").length;
@@ -883,8 +883,9 @@ async function withdrawalsPage(version=pageVersion){
  if(r.error)throw r.error;if(!pageIs("withdrawals",version))return;
  putContent(`<h2>Withdrawals</h2><button class="gray" onclick="withdrawalsPage()">Refresh Requests</button><div id="withdrawList"></div>`,"withdrawals",version);
  const target=document.getElementById("withdrawList");if(!target)return;
+ const pendingRows=(r.data||[]).filter(x=>String(x.status||"").trim().toLowerCase()==="pending");
  const groups=new Map();
- (r.data||[]).forEach(x=>{
+ pendingRows.forEach(x=>{
   const id=String(x.customer_id||"unknown");
   if(!groups.has(id))groups.set(id,[]);
   groups.get(id).push(x);
@@ -895,11 +896,11 @@ async function withdrawalsPage(version=pageVersion){
   const latest=items[0]||{};
   return `<div class="kyc-row">
    <span class="kyc-customer" onclick="openCustomerProfile('${esc(id)}')">${esc(customer?.full_name||"Name not available")} — ${esc(customer?.email||"Email not available")}</span>
-   <span>${items.length} withdrawals · ${pending} pending</span>
-   <span>Latest: ${money(latest.amount)} · ${esc(latest.status||"Pending")}</span>
+   <span>${pending} pending withdrawal${pending===1?"":"s"}</span>
+   <span>Latest pending: ${money(latest.amount)}</span>
    <button class="gray" onclick="openCustomerProfile('${esc(id)}')">Open Full History</button>
   </div>`;
- }).join("")||"No withdrawal requests.";
+ }).join("")||"No pending withdrawal requests.";
 }
 async function withdrawStatus(id,status,customerId=null){
  if(!["completed","rejected"].includes(status))return note("Invalid withdrawal status.",true);
