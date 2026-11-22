@@ -1301,7 +1301,7 @@ async function loadHomeData(){
  try{
   const [ordersResult,productsResult]=await Promise.allSettled([
    withTimeout(db.from("orders").select("*").eq("customer_id",userId).order("created_at",{ascending:false}),"Orders"),
-   withTimeout(db.from("customer_products").select("id").eq("customer_id",userId),"Products")
+   withTimeout(db.from("customer_products").select("id").eq("customer_id",userId).is("ordered_at",null),"Products")
   ]);
   if(!currentUser||currentUser.id!==userId)return;
   if(ordersResult.status==="fulfilled"&&!ordersResult.value.error){
