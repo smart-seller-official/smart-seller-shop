@@ -1012,15 +1012,32 @@ async function notificationsPage(version=pageVersion){
 /* CREDIT SCORE */
 async function creditPage(version=pageVersion){
  await loadCustomers();if(!pageIs("credit_score_history",version))return;
- const r=await db.from("credit_score_history").select("*").order("created_at",{ascending:false}).limit(300);
- if(r.error)throw r.error;if(!pageIs("credit_score_history",version))return;
  putContent(`<h2>Credit Score History</h2><div class="panel"><h3>Change Customer Credit Score</h3>
  <label>Customer</label><select id="ccustomer"><option value="">Select customer</option>
  ${customers.map(c=>`<option value="${esc(c.id)}">${esc(c.full_name||c.email||c.id)} — Current score: ${esc(c.credit_score??0)}</option>`).join("")}</select>
  <label>New Credit Score</label><input id="newScore" type="number" min="0" max="100">
  <label>Reason</label><input id="scoreReason" placeholder="Reason for score change">
  <button class="green" onclick="saveCreditScore()">Save Credit Score</button></div>
- <div class="panel"><h3>Credit Score History</h3>${renderCustomerLinkedTable(r.data||[])}</div>`,"credit_score_history",version);
+ <div class="panel"><h3>Credit Score History</h3>
+ <label>Search customer by name or email</label>
+ <input id="creditHistorySearch" type="search" placeholder="Enter customer name or email">
+ <button class="green" onclick="searchCreditScoreHistory()">Search</button>
+ <div id="creditHistoryResults"><p class="muted">Search a customer to view only that customer's credit score history.</p></div>
+ </div>`,"credit_score_history",version);
+}
+async function searchCreditScoreHistory(){
+ const q=val("creditHistorySearch").toLocaleLowerCase();
+ const box=document.getElementById("creditHistoryResults");
+ if(!box)return;
+ if(!q){box.innerHTML="<p class='error'>Customer name ya email enter karein.</p>";return;}
+ const matches=customers.filter(c=>String(c.full_name||"").toLocaleLowerCase()===q||String(c.email||"").toLocaleLowerCase()===q);
+ const found=matches.length?matches:customers.filter(c=>String(c.full_name||"").toLocaleLowerCase().includes(q)||String(c.email||"").toLocaleLowerCase().includes(q));
+ if(found.length===0){box.innerHTML="<p class='muted'>No customer found.</p>";return;}
+ if(found.length>1){box.innerHTML="<p class='error'>Multiple customers found. Please enter the full name or email.</p>";return;}
+ box.textContent="Loading...";
+ const r=await db.from("credit_score_history").select("*").eq("customer_id",found[0].id).order("created_at",{ascending:false});
+ if(r.error){box.innerHTML="<p class='error'>"+esc(r.error.message)+"</p>";return;}
+ box.innerHTML=r.data?.length?renderCustomerLinkedTable(r.data):"<p class='muted'>Is customer ki koi credit score history nahi hai.</p>";
 }
 async function saveCreditScore(){
  const cid=val("ccustomer"),score=Number(val("newScore")),reason=val("scoreReason");
