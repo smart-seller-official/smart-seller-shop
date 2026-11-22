@@ -134,6 +134,15 @@ button,input,select,textarea{font-size:14px}
 
 
 .withdraw-history-wrap{margin-top:14px;border-top:1px solid #e6edf5;padding-top:12px}.withdraw-history-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}.withdraw-history-head button{border:0;background:#edf3fb;border-radius:7px;padding:5px 9px;font-size:11px;color:#263b59}.withdraw-history-row{display:flex;align-items:center;gap:8px;min-width:0;padding:8px 2px;border-bottom:1px solid #edf1f6;font-size:11px;line-height:1.2;white-space:nowrap;overflow:hidden}.withdraw-history-row>span:first-child{color:#718096;flex:0 0 62px}.withdraw-history-row>span:nth-child(2){flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}.withdraw-history-row>strong{flex:0 0 auto;font-size:11px}.withdraw-status{flex:0 0 auto;text-transform:capitalize;font-weight:700}.withdraw-status.pending{color:#b7791f}.withdraw-status.approved{color:#16804a}.withdraw-status.rejected{color:#c0392b}.withdraw-note{display:none}
+
+/* About page: company and marketplace directory */
+.company-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
+.company-tile{min-width:0;background:#fff;border:1px solid var(--border);border-radius:13px;padding:13px 8px;text-align:center;box-shadow:0 3px 12px #18345b08}
+.company-tile img{width:100%;height:42px;max-width:112px;object-fit:contain;display:block;margin:0 auto 9px}
+.company-tile strong{display:block;font-size:12px;overflow-wrap:anywhere}
+.about-note{background:#f1f5f9;border:1px solid var(--border);padding:12px;border-radius:11px;color:#53627a;font-size:12px;line-height:1.5}
+@media(min-width:520px){.company-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
 </style>
 </head>
 <body>
@@ -204,6 +213,39 @@ button,input,select,textarea{font-size:14px}
    <div class="stat"><div class="stat-icon">💵</div><div class="stat-label">Total Profit</div><strong id="homeProfit" class="purple"></strong><button onclick="openPage('wallet')">View Profit</button></div>
    <div class="stat"><div class="stat-icon">🎧</div><div class="stat-label">Customer Service</div><strong class="blue">Support</strong><small id="customerMessagesBadge" class="hidden" style="display:inline-block;margin:7px auto 0;padding:5px 10px;border-radius:14px;background:#e11d48;color:#fff;font-size:12px;font-weight:700"></small><button onclick="openPage('support')">Open Customer Service</button></div>
   </div>
+  <div class="card" style="text-align:center;margin-top:14px"><h3>About Smart Seller</h3><p class="muted">Learn about companies and marketplaces in online commerce.</p><button class="full" onclick="openPage('about')">About</button></div>
+ </section>
+
+ <section id="aboutPage" class="page hidden">
+  <div class="page-title"><h2>About</h2><p class="muted">Companies and marketplaces in global online commerce.</p></div>
+  <div class="card">
+   <h3>20 Global Companies</h3>
+   <p class="muted">These are well-known companies and online marketplaces from the e-commerce industry.</p>
+   <div class="company-grid">
+    <div class="company-tile"><img src="https://cdn.simpleicons.org/amazon" alt="Amazon logo" onerror="this.style.display='none'"><strong>Amazon</strong></div>
+    <div class="company-tile"><img src="https://cdn.simpleicons.org/shopify" alt="Shopify logo" onerror="this.style.display='none'"><strong>Shopify</strong></div>
+    <div class="company-tile"><img src="https://cdn.simpleicons.org/alibaba" alt="Alibaba logo" onerror="this.style.display='none'"><strong>Alibaba</strong></div>
+    <div class="company-tile"><img src="https://cdn.simpleicons.org/ebay" alt="eBay logo" onerror="this.style.display='none'"><strong>eBay</strong></div>
+    <div class="company-tile"><img src="https://cdn.simpleicons.org/walmart" alt="Walmart logo" onerror="this.style.display='none'"><strong>Walmart</strong></div>
+    <div class="company-tile"><img src="https://cdn.simpleicons.org/etsy" alt="Etsy logo" onerror="this.style.display='none'"><strong>Etsy</strong></div>
+    <div class="company-tile"><img src="https://cdn.simpleicons.org/aliexpress" alt="AliExpress logo" onerror="this.style.display='none'"><strong>AliExpress</strong></div>
+    <div class="company-tile"><img src="https://cdn.simpleicons.org/target" alt="Target logo" onerror="this.style.display='none'"><strong>Target</strong></div>
+    <div class="company-tile"><img src="https://cdn.simpleicons.org/bestbuy" alt="Best Buy logo" onerror="this.style.display='none'"><strong>Best Buy</strong></div>
+    <div class="company-tile"><img src="https://cdn.simpleicons.org/costco" alt="Costco logo" onerror="this.style.display='none'"><strong>Costco</strong></div>
+    <div class="company-tile"><img src="https://cdn.simpleicons.org/mercadolibre" alt="Mercado Libre logo" onerror="this.style.display='none'"><strong>Mercado Libre</strong></div>
+    <div class="company-tile"><img src="https://cdn.simpleicons.org/rakuten" alt="Rakuten logo" onerror="this.style.display='none'"><strong>Rakuten</strong></div>
+    <div class="company-tile"><img src="https://cdn.simpleicons.org/temu" alt="Temu logo" onerror="this.style.display='none'"><strong>Temu</strong></div>
+    <div class="company-tile"><img src="https://cdn.simpleicons.org/shein" alt="SHEIN logo" onerror="this.style.display='none'"><strong>SHEIN</strong></div>
+    <div class="company-tile"><img src="https://cdn.simpleicons.org/zalando" alt="Zalando logo" onerror="this.style.display='none'"><strong>Zalando</strong></div>
+    <div class="company-tile"><img src="https://cdn.simpleicons.org/flipkart" alt="Flipkart logo" onerror="this.style.display='none'"><strong>Flipkart</strong></div>
+    <div class="company-tile"><img src="https://cdn.simpleicons.org/jd" alt="JD.com logo" onerror="this.style.display='none'"><strong>JD.com</strong></div>
+    <div class="company-tile"><img src="https://cdn.simpleicons.org/shopee" alt="Shopee logo" onerror="this.style.display='none'"><strong>Shopee</strong></div>
+    <div class="company-tile"><img src="https://cdn.simpleicons.org/lazada" alt="Lazada logo" onerror="this.style.display='none'"><strong>Lazada</strong></div>
+    <div class="company-tile"><img src="https://cdn.simpleicons.org/wayfair" alt="Wayfair logo" onerror="this.style.display='none'"><strong>Wayfair</strong></div>
+   </div>
+   <p class="about-note" style="margin-top:15px">Note: These logos and names are shown only as examples of well-known companies and marketplaces. Their appearance does not mean Smart Seller has an official partnership, sponsorship, or endorsement from them.</p>
+  </div>
+  <button class="full gray" onclick="openPage('home')">Back to Dashboard</button>
  </section>
 
  <section id="productsPage" class="page hidden">
@@ -424,7 +466,7 @@ async function loadDashboard(user){
  $("bottomNav").classList.remove("hidden");
  if($("welcome"))$("welcome").textContent=user.user_metadata?.full_name||user.email||"Customer";
  const savedPage=localStorage.getItem("smartSeller_lastPage_"+user.id);
- const allowedPages=["home","products","orders","wallet","support","profile"];
+ const allowedPages=["home","products","orders","wallet","support","profile","about"];
  const initialPage=allowedPages.includes(savedPage)?savedPage:"home";
  initCustomerBadgeTracking();
  // Show the selected page immediately and start its data request without
@@ -480,11 +522,11 @@ async function refreshCustomerBadges(){
 }
 
 window.openPage=function(page,skipDataLoad=false){
- if(currentUser&&["home","products","orders","wallet","support","profile"].includes(page)){
+ if(currentUser&&["home","products","orders","wallet","support","profile","about"].includes(page)){
   localStorage.setItem("smartSeller_lastPage_"+currentUser.id,page);
  }
  document.body.classList.toggle("chat-open",page==="support");
- ["home","products","orders","wallet","support","profile"].forEach(p=>$(p+"Page").classList.toggle("hidden",p!==page));
+ ["home","products","orders","wallet","support","profile","about"].forEach(p=>$(p+"Page").classList.toggle("hidden",p!==page));
  document.querySelectorAll(".bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===page));
  if(!skipDataLoad){
   if(page==="home")loadHomeData();
