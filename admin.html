@@ -491,9 +491,17 @@ async function dashboard(version){
  const tables=[["profiles","Customers","customers"],["products","Products","products"],["orders","Orders","orders"],["withdrawals","Withdrawals","withdrawals"],["kyc_submissions","KYC Requests","kyc_submissions"],["support_chat_messages","Messages","support_messages"]];
  let html="<h2>Dashboard</h2><div class='cards'>";
  for(const [table,name,page] of tables){
-  const r=await db.from(table).select("*",{count:"exact",head:true});
+  let displayCount=0,error=false;
+  if(table==="support_chat_messages"){
+   const r=await db.from(table).select("sender_role,sender,read_at").limit(2000);
+   if(r.error)error=true;
+   else displayCount=(r.data||[]).filter(m=>String(m.sender_role||m.sender||"").toLowerCase()==="customer"&&!m.read_at).length;
+  }else{
+   const r=await db.from(table).select("*",{count:"exact",head:true});
+   if(r.error)error=true;else displayCount=r.count??0;
+  }
   if(!pageIs("dashboard",version))return;
-  html+=`<div class="stat dashboard-stat" role="button" tabindex="0" onclick="go('${page}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();go('${page}')}">${name}<strong>${r.error?"Error":r.count??0}</strong><span class="stat-hint">Click to open</span></div>`;
+  html+=`<div class="stat dashboard-stat" role="button" tabindex="0" onclick="go('${page}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();go('${page}')}">${name}<strong>${error?"Error":displayCount}</strong><span class="stat-hint">Click to open</span></div>`;
  }
  putContent(html+"</div>","dashboard",version);
 }
@@ -1022,13 +1030,16 @@ function renderSupportCustomers(){
  if(!box)return;
  const groups=makeSupportGroups();
  const q=(document.getElementById("supportSearch")?.value||"").toLowerCase();
- const allIds=Array.from(new Set([...Object.keys(groups),...supportCustomers.map(c=>String(c.id))]));
- const ids=allIds.filter(id=>(String(supportCustomerName(id))+" "+supportCustomerEmail(id)).toLowerCase().includes(q));
- box.innerHTML=ids.map(id=>{
-  const msgs=groups[id]||[],last=msgs[msgs.length-1];
-  const name=supportCustomerName(id),email=supportCustomerEmail(id);
+ const ids=Object.keys(groups).filter(id=>{
+  const msgs=groups[id]||[];
   const unread=msgs.filter(m=>String(m.sender_role||m.sender||"").toLowerCase()==="customer"&&!m.read_at).length;
-  const summary=last?(msgs.length+" messages · Latest: "+(last.message||"")):"No messages yet";
+  return unread>0&&(String(supportCustomerName(id))+" "+supportCustomerEmail(id)).toLowerCase().includes(q);
+ });
+ box.innerHTML=ids.map(id=>{
+  const msgs=groups[id]||[];
+  const unread=msgs.filter(m=>String(m.sender_role||m.sender||"").toLowerCase()==="customer"&&!m.read_at).length;
+  const name=supportCustomerName(id),email=supportCustomerEmail(id);
+  const summary=unread+" unread message"+(unread===1?"":"s");
   return `<div class="support-row">
    <b class="support-customer" title="${esc(name)}" onclick="openCustomerProfile('${esc(id)}')">${esc(name)}</b>
    <span class="support-email" title="${esc(email)}" onclick="openCustomerProfile('${esc(id)}')">${esc(email)}</span>
