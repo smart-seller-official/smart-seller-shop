@@ -1229,7 +1229,26 @@ async function deleteCustomerAccount(id){
   note("Customer account permanently deleted.");
   await loadCustomers();
   if(current==="customers")await customersPage();
- }catch(e){note("Delete failed: "+(e.message||"Check Edge Function setup."),true)}
+ }catch(e){
+  let detail=e?.message||"Check Edge Function setup.";
+  try{
+   if(e?.context&&typeof e.context.clone==="function"){
+    const response=e.context.clone();
+    const body=await response.text();
+    if(body){
+     let serverMessage=body;
+     try{
+      const parsed=JSON.parse(body);
+      serverMessage=parsed.error||parsed.message||parsed.msg||body;
+     }catch(_){}
+     detail+=" (HTTP "+response.status+"): "+serverMessage;
+    }else{
+     detail+=" (HTTP "+response.status+")";
+    }
+   }
+  }catch(_){}
+  note("Delete failed: "+detail,true);
+ }
 }
 
 /* CUSTOMER SERVICE CHAT */
