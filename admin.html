@@ -240,6 +240,34 @@ async function login(){
  finally{b.disabled=false}
 }
 async function logout(){if(db)await db.auth.signOut();location.reload()}
+let adminAlertAudioContext=null;
+let adminKnownNotificationIds=null;
+function unlockAdminNotificationSound(){
+ try{
+  const AudioContextClass=window.AudioContext||window.webkitAudioContext;
+  if(!AudioContextClass)return;
+  if(!adminAlertAudioContext)adminAlertAudioContext=new AudioContextClass();
+  if(adminAlertAudioContext.state==="suspended")adminAlertAudioContext.resume().catch(()=>{});
+ }catch(e){console.warn("Notification sound unavailable:",e.message)}
+}
+document.addEventListener("pointerdown",unlockAdminNotificationSound,{once:true});
+document.addEventListener("keydown",unlockAdminNotificationSound,{once:true});
+function playAdminNotificationSound(){
+ try{
+  if(!adminAlertAudioContext||adminAlertAudioContext.state!=="running")return;
+  const ctx=adminAlertAudioContext;
+  [0,0.22,0.44].forEach((delay,index)=>{
+   const oscillator=ctx.createOscillator(),gain=ctx.createGain();
+   oscillator.type="sine";
+   oscillator.frequency.value=index===1?1046:880;
+   gain.gain.setValueAtTime(0.0001,ctx.currentTime+delay);
+   gain.gain.exponentialRampToValueAtTime(0.16,ctx.currentTime+delay+0.025);
+   gain.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+delay+0.16);
+   oscillator.connect(gain);gain.connect(ctx.destination);
+   oscillator.start(ctx.currentTime+delay);oscillator.stop(ctx.currentTime+delay+0.17);
+  });
+ }catch(e){console.warn("Notification sound error:",e.message)}
+}
 async function refreshAdminBadges(){
  if(!db)return;
  try{
@@ -249,9 +277,18 @@ async function refreshAdminBadges(){
    db.from("kyc_submissions").select("id,status"),
    db.from("withdrawals").select("id,status"),
    db.from("profiles").select("id"),
-   db.from("admin_notifications").select("id",{count:"exact",head:true}).eq("is_read",false).in("source_table",["withdrawals","kyc_submissions","support_chat_messages","support_messages"])
+   db.from("admin_notifications").select("id",{count:"exact",head:true}).eq("is_read",false).in("source_table",["withdrawals","kyc_submissions","support_chat_messages","support_messages"]),
+   db.from("admin_notifications").select("id").eq("is_read",false).in("source_table",["withdrawals","kyc_submissions","support_chat_messages","support_messages"]).order("created_at",{ascending:false}).limit(100)
   ]);
-  if(results[0].error)throw results[0].error;if(results[1].error)throw results[1].error;if(results[2].error)throw results[2].error;if(results[3].error)throw results[3].error;if(results[4].error)throw results[4].error;if(results[5].error)throw results[5].error;
+  if(results[0].error)throw results[0].error;if(results[1].error)throw results[1].error;if(results[2].error)throw results[2].error;if(results[3].error)throw results[3].error;if(results[4].error)throw results[4].error;if(results[5].error)throw results[5].error;if(results[6].error)throw results[6].error;
+  const notificationIds=(results[6].data||[]).map(n=>String(n.id));
+  if(adminKnownNotificationIds===null)adminKnownNotificationIds=new Set(notificationIds);
+  else{
+   const newNotificationIds=notificationIds.filter(id=>!adminKnownNotificationIds.has(id));
+   if(newNotificationIds.length)playAdminNotificationSound();
+   notificationIds.forEach(id=>adminKnownNotificationIds.add(id));
+   if(adminKnownNotificationIds.size>500)adminKnownNotificationIds=new Set(notificationIds);
+  }
   const pending=(results[0].data||[]).filter(o=>["pending","pickup","picked_up","picked up"].includes(String(o.status||"").toLowerCase())).length;
   const waiting=(results[1].data||[]).filter(m=>
    String(m.sender_role||m.sender||"").toLowerCase()==="customer"&&!m.read_at
