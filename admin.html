@@ -413,7 +413,7 @@ function renderCustomerLinkedTable(data){
 /* CUSTOMER PROFILE - OTHER ADMIN SECTIONS */
 function customerProfilePhoto(p){
  const url=String(p?.avatar||p?.avatar_url||"").trim();
- return url?'<img class="admin-customer-avatar" src="'+esc(url)+'" alt="Customer profile picture" onerror="this.style.display=\\'none\\'">':"";
+ return url?'<img class="admin-customer-avatar" src="'+esc(url)+'" alt="Customer profile picture">':"";
 }
 function customerProfileDetails(p){
  const fields=[["FULL NAME",p?.full_name],["EMAIL",p?.email],["PHONE",p?.phone]]
