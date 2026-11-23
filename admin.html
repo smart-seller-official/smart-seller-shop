@@ -1018,6 +1018,7 @@ let supportRefreshing = false;
 let sendingReplyIds = new Set();
 let supportLastSignature = "";
 let supportCustomers = [];
+let supportApprovedCustomerIds = new Set();
 
 function supportCustomerName(id){
  const customer=supportCustomers.find(c=>String(c.id).trim()===String(id).trim())||customers.find(c=>String(c.id).trim()===String(id).trim());
@@ -1035,6 +1036,9 @@ async function supportPage(version=pageVersion){
  const customerResult=await db.from("profiles").select("id,full_name,email").limit(1000);
  if(customerResult.error)throw customerResult.error;
  supportCustomers=customerResult.data||[];
+ const approvedResult=await db.from("kyc_submissions").select("customer_id").ilike("status","approved").limit(1000);
+ if(approvedResult.error)throw approvedResult.error;
+ supportApprovedCustomerIds=new Set((approvedResult.data||[]).map(x=>String(x.customer_id||"").trim()).filter(Boolean));
  const r=await db.from("support_chat_messages").select("*").order("created_at",{ascending:true}).limit(1000);
  if(r.error)throw r.error;
  if(!pageIs("support_messages",version))return;
@@ -1061,10 +1065,10 @@ function renderSupportCustomers(){
  if(!box)return;
  const groups=makeSupportGroups();
  const q=(document.getElementById("supportSearch")?.value||"").toLowerCase();
- const ids=Object.keys(groups).filter(id=>{
+ const ids=[...new Set([...Object.keys(groups),...supportApprovedCustomerIds])].filter(id=>{
   const msgs=groups[id]||[];
   const unread=msgs.filter(m=>String(m.sender_role||m.sender||"").toLowerCase()==="customer"&&!m.read_at).length;
-  return unread>0&&(String(supportCustomerName(id))+" "+supportCustomerEmail(id)).toLowerCase().includes(q);
+  return (unread>0||supportApprovedCustomerIds.has(String(id)))&&(String(supportCustomerName(id))+" "+supportCustomerEmail(id)).toLowerCase().includes(q);
  });
  box.innerHTML=ids.map(id=>{
   const msgs=groups[id]||[];
