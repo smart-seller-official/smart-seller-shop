@@ -223,7 +223,7 @@ async function refreshAdminBadges(){
    db.from("kyc_submissions").select("id,status"),
    db.from("withdrawals").select("id,status"),
    db.from("profiles").select("id"),
-   db.from("admin_notifications").select("id",{count:"exact",head:true}).eq("is_read",false)
+   db.from("admin_notifications").select("id",{count:"exact",head:true}).eq("is_read",false).in("source_table",["withdrawals","kyc_submissions","support_chat_messages","support_messages"])
   ]);
   if(results[0].error)throw results[0].error;if(results[1].error)throw results[1].error;if(results[2].error)throw results[2].error;if(results[3].error)throw results[3].error;if(results[4].error)throw results[4].error;if(results[5].error)throw results[5].error;
   const pending=(results[0].data||[]).filter(o=>["pending","pickup","picked_up","picked up"].includes(String(o.status||"").toLowerCase())).length;
@@ -1020,18 +1020,19 @@ let supportLastSignature = "";
 let supportCustomers = [];
 
 function supportCustomerName(id){
- const customer=supportCustomers.find(c=>String(c.id)===String(id));
- return customer?.full_name||customer?.email||customerName(id);
+ const customer=supportCustomers.find(c=>String(c.id).trim()===String(id).trim())||customers.find(c=>String(c.id).trim()===String(id).trim());
+ const name=String(customer?.full_name||"").trim();
+ return name||String(customer?.email||"").trim()||String(id);
 }
 function supportCustomerEmail(id){
- const customer=supportCustomers.find(c=>String(c.id)===String(id));
- return customer?.email||customerEmail(id);
+ const customer=supportCustomers.find(c=>String(c.id).trim()===String(id).trim())||customers.find(c=>String(c.id).trim()===String(id).trim());
+ return String(customer?.email||"").trim()||customerEmail(id);
 }
 
 async function supportPage(version=pageVersion){
  await loadCustomers();
  if(!pageIs("support_messages",version))return;
- const customerResult=await db.from("profiles").select("id,full_name,email").order("created_at",{ascending:true}).limit(1000);
+ const customerResult=await db.from("profiles").select("id,full_name,email").limit(1000);
  if(customerResult.error)throw customerResult.error;
  supportCustomers=customerResult.data||[];
  const r=await db.from("support_chat_messages").select("*").order("created_at",{ascending:true}).limit(1000);
@@ -1156,7 +1157,7 @@ async function sendReply(){
 /* NOTIFICATIONS */
 async function notificationsPage(version=pageVersion){
  await loadCustomers();
- const r=await db.from("admin_notifications").select("*").eq("is_read",false).order("created_at",{ascending:false}).limit(300);
+ const r=await db.from("admin_notifications").select("*").eq("is_read",false).in("source_table",["withdrawals","kyc_submissions","support_chat_messages","support_messages"]).order("created_at",{ascending:false}).limit(300);
  if(r.error)throw r.error;if(!pageIs("notifications",version))return;
  const rows=r.data||[];
  const html=rows.length?rows.map(n=>{
