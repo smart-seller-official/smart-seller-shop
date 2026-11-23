@@ -1212,7 +1212,10 @@ async function customersPage(version=pageVersion){
 }
 function renderCustomerAccounts(rows){
  const box=document.getElementById("customerAccountsList");if(!box)return;
- box.innerHTML=rows.map(c=>"<div class=\"kyc-row\"><span class=\"kyc-customer\" onclick=\"openCustomerProfile(\u0027"+esc(c.id)+"\u0027)\">"+esc(c.full_name||"Name not available")+" — "+esc(c.email||"Email not available")+"</span><span class=\""+(String(c.email||"").trim()?"ok":"error")+"\" style=\"font-size:11px;font-weight:700;white-space:nowrap\">"+(String(c.email||"").trim()?"✓ Gmail Available":"✕ Gmail Unavailable")+"</span><span class=\"muted\">"+esc(c.phone||"Phone not available")+"</span><button class=\"gray\" onclick=\"openCustomerProfile(\u0027"+esc(c.id)+"\u0027)\">Details</button><button class=\"red\" onclick=\"deleteCustomerAccount(\u0027"+esc(c.id)+"\u0027)\">Delete</button></div>").join("")||"No customers found.";
+ box.innerHTML=rows.map(c=>{
+  const details=[c.full_name,c.email,c.phone].filter(v=>String(v||"").trim()!=="");
+  return "<div class=\"kyc-row\"><span class=\"kyc-customer\" onclick=\"openCustomerProfile('"+esc(c.id)+"')\">"+(details.map(esc).join(" — ")||"Customer")+"</span><button class=\"gray\" onclick=\"openCustomerProfile('"+esc(c.id)+"')\">Details</button><button class=\"red\" onclick=\"deleteCustomerAccount('"+esc(c.id)+"')\">Delete</button></div>";
+ }).join("")||"No customers found.";
 }
 function filterCustomerAccounts(){
  const q=val("customerSearch").toLowerCase();
