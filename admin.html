@@ -83,7 +83,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere}
 .admin-chat-screen .chat-time{display:block;color:#718096;font-size:10px;margin-top:5px;text-align:right}
 .admin-chat-screen .chat-composer{flex:0 0 auto;display:flex;align-items:flex-end;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #e2e8f0}
 .admin-chat-screen .chat-composer textarea{flex:1;min-height:42px;max-height:110px;resize:none;margin:0;border-radius:22px;padding:11px 15px;background:#f1f5f9;border:0}
-.admin-chat-screen .chat-composer button{width:44px;height:44px;flex:0 0 44px;border-radius:50%;padding:0;font-size:20px}
+.admin-chat-screen .chat-composer button{width:auto;min-width:76px;height:44px;flex:0 0 auto;border-radius:22px;padding:0 16px;font-size:14px;font-weight:700;white-space:nowrap}
 
 @media(max-width:760px){
 #layout{flex-direction:column}
@@ -1208,7 +1208,7 @@ async function openSupportChat(customerId,preserveDraft=false){
  putContent(`<section class="admin-chat-screen">
   <div class="chat-topbar"><button type="button" class="chat-back" onclick="closeAdminSupportChat()">‹</button><div><strong>${esc(supportCustomerName(customerId))}</strong><small>${esc(supportCustomerEmail(customerId))}</small></div><span class="chat-online"></span></div>
   <div id="supportChatMessages" class="chat-scroll"></div>
-  <form id="adminSupportForm" class="chat-composer"><textarea id="supportReply" placeholder="Type a message..." rows="1">${preserveDraft?esc(draft):""}</textarea><input id="adminSupportImage" type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden><button type="button" class="gray" onclick="document.getElementById('adminSupportImage').click()" aria-label="Attach image">📎</button><button type="submit" id="sendSupportReply" aria-label="Send message">➤</button></form>
+  <form id="adminSupportForm" class="chat-composer"><textarea id="supportReply" placeholder="Type a message..." rows="1">${preserveDraft?esc(draft):""}</textarea><input id="adminSupportImage" type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden><button type="button" class="gray" onclick="document.getElementById('adminSupportImage').click()" aria-label="Attach image">📎</button><button type="submit" id="sendSupportReply" aria-label="Send message">Send ➤</button></form>
  </section>`,"support_messages",pageVersion);
  const replyForm=document.getElementById("adminSupportForm");
  if(replyForm)replyForm.addEventListener("submit",event=>{event.preventDefault();sendReply();});
@@ -1255,7 +1255,7 @@ async function sendReply(){
   if(refreshed.error)throw refreshed.error;
   supportMessages=refreshed.data||[];supportLastSignature=JSON.stringify(supportMessages);makeSupportGroups();
   if(current==="support_messages"&&activeSupportCustomerId===customerId)openSupportChat(customerId,false);
- }catch(e){note("Message error: "+e.message,true);if(btn){btn.disabled=false;btn.textContent="➤";}}
+ }catch(e){note("Message error: "+e.message,true);if(btn){btn.disabled=false;btn.textContent="Send ➤";}}
  finally{sendingReplyIds.delete(customerId);}
 }
 
