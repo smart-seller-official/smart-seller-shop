@@ -366,15 +366,17 @@ async function check(){
  }catch(e){document.getElementById("loginError").textContent=e.message}
 }
 async function loadCustomers(){
- const r=await db.from("profiles").select("*").limit(1000);
- if(r.error)throw r.error;
+ const result=await db.functions.invoke("admin-list-customers",{body:{}});
+ if(result.error)throw result.error;
+ if(result.data?.error)throw new Error(result.data.error);
+ const rows=Array.isArray(result.data?.customers)?result.data.customers:[];
  const admins=await db.from("admin_users").select("user_id");
  if(admins.error)throw admins.error;
  const adminIds=new Set((admins.data||[]).map(a=>String(a.user_id)));
  const {data:{user:adminUser}}=await db.auth.getUser();
  if(adminUser)adminIds.add(String(adminUser.id));
  const seenEmails=new Set(),seenNames=new Set(),unique=[];
- (r.data||[]).filter(c=>!adminIds.has(String(c.id))).forEach(c=>{
+ rows.filter(c=>!adminIds.has(String(c.id))).forEach(c=>{
   const email=String(c.email||"").trim().toLowerCase();
   const name=String(c.full_name||"").trim().toLowerCase().replace(/\\s+/g," ");
   if((email&&seenEmails.has(email))||(name&&name!=="name not available"&&seenNames.has(name)))return;
@@ -1202,6 +1204,7 @@ function renderCustomerAccounts(rows){
  box.innerHTML=rows.map(c=>`
   <div class="kyc-row">
    <span class="kyc-customer" onclick="openCustomerProfile('${esc(c.id)}')">${esc(c.full_name||"Name not available")} — ${esc(c.email||"Email not available")}</span>
+   <span style="font-size:11px;font-weight:700;color:${c.email_verified?"#159b79":"#d97706"}">${c.email_verified?"✓ Email Verified":"Email Not Verified"}</span>
    <span class="muted">${esc(c.phone||"Phone not available")}</span>
    <button class="gray" onclick="openCustomerProfile('${esc(c.id)}')">Details</button>
    <button class="red" onclick="deleteCustomerAccount('${esc(c.id)}')">Delete</button>
