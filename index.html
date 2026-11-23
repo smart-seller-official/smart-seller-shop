@@ -445,6 +445,15 @@ body:has(#dashboard:not(.hidden)):not(.chat-open){background:#EAF0F7!important;b
   border-radius:12px;
   box-shadow:0 4px 12px rgba(16,36,61,.12);
 }
+
+/* Keep customer service chat fixed; only the messages area scrolls */
+html:has(body.chat-open),body.chat-open{height:100%;overflow:hidden}
+body.chat-open{position:fixed;inset:0;width:100%;height:100dvh;overflow:hidden}
+body.chat-open main{height:100dvh;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+body.chat-open #dashboard{height:100%;min-height:0;overflow:hidden}
+body.chat-open #supportPage{height:100%;min-height:0;flex:1;overflow:hidden}
+body.chat-open .chat-scroll{min-height:0;overscroll-behavior:contain}
+
 </style>
 </head>
 <body>
