@@ -1120,6 +1120,11 @@ async function kycPage(version=pageVersion){
  target.innerHTML=customerGroups.map(([customerId,requests])=>{
   const customer=customers.find(c=>String(c.id)===String(customerId));
   const customerLabel=(customer?.full_name||"Name not available")+" — "+(customer?.email||"Email not available");
+  const latest=requests[0];
+  const latestPending=String(latest.status||"").trim().toLowerCase()==="pending";
+  const summaryActions=latestPending
+   ? `<button class="green" onclick="event.preventDefault();event.stopPropagation();kycStatus('${esc(latest.id)}','approved')">Approve</button><button class="red" onclick="event.preventDefault();event.stopPropagation();kycStatus('${esc(latest.id)}','rejected')">Reject</button>`
+   : `<b class="muted">${esc(latest.status||"Pending")}</b>`;
   const visibleRows=requests.map(x=>{
    const pending=String(x.status||"").trim().toLowerCase()==="pending";
    return `<div class="kyc-row">
@@ -1129,10 +1134,15 @@ async function kycPage(version=pageVersion){
     <button class="gray" onclick="openKycCustomer('${esc(customerId)}')">View ID Card</button>
    </div>`;
   }).join("");
-  return `<div class="panel">
-   <div class="kyc-row"><span class="kyc-customer" onclick="openKycCustomer('${esc(customerId)}')">${esc(customerLabel)}</span><span class="muted">${requests.length} KYC request${requests.length===1?"":"s"}</span></div>
-   ${visibleRows}
-  </div>`;
+  return `<details class="panel kyc-customer-group">
+   <summary style="display:flex;align-items:center;gap:8px;flex-wrap:nowrap;white-space:nowrap;overflow-x:auto;list-style:none;cursor:pointer;padding:10px 8px">
+    <span class="kyc-customer" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis" title="${esc(customerLabel)}">${esc(customerLabel)}</span>
+    <span class="muted">${requests.length} request${requests.length===1?"":"s"}</span>
+    <span style="display:flex;gap:5px;flex-shrink:0">${summaryActions}</span>
+    <button class="gray" style="flex-shrink:0" onclick="event.preventDefault();event.stopPropagation();openKycCustomer('${esc(customerId)}')">View ID</button>
+   </summary>
+   <div style="padding:8px 0">${visibleRows}</div>
+  </details>`;
  }).join("")||"No KYC requests found.";
 }
 async function kycStatus(id,status){
