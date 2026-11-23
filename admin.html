@@ -713,22 +713,19 @@ async function ordersPage(version=pageVersion){
  const customerProductsResult=await db.from("customer_products").select("id,customer_id,product_id,product_name,price,category,image_url,created_at,ordered_at").order("created_at",{ascending:false}).limit(2000);
  if(customerProductsResult.error)throw customerProductsResult.error;
  customerProductRows=(customerProductsResult.data||[]).filter(x=>!x.ordered_at&&products.some(p=>String(p.id)===String(x.product_id)));
- if(!pageIs("orders",version))return;profitEdited=false;
+ if(!pageIs("orders",version))return;profitEdited=false;orderDraftRowCount=0;
  putContent(`
  <h2>Orders</h2>
  <div class="panel"><h3>Send Order to Customer</h3>
  <label>Customer</label>
  <select id="ocustomer" onchange="syncOrderCustomerFilter(this.value);renderOrderProductOptions()">
- <option value="">All Customers</option>
+ <option value="">Select Customer</option>
  ${customers.map(c=>`<option value="${esc(c.id)}">${esc(c.full_name||c.email||c.id)} — ${esc(c.email||"")}</option>`).join("")}
  </select>
- <label>Customer Added Product</label><select id="oproduct" onchange="calcOrder(true)"><option value="">Select customer product</option></select>
- <label>Quantity</label><input id="oqty" type="number" min="1" value="1" oninput="calcOrder()">
- <label>Admin Profit (20% automatic - manually editable)</label>
- <input id="oprofit" type="number" min="0" step="0.01" value="0" oninput="profitEdited=true;calcOrder()">
- <div class="order-calculation"><p>Product Price <strong id="productPrice">$0.00</strong></p><p>Profit <strong id="profitDisplay">$0.00</strong></p><p>Expected Return <strong id="expectedReturn">$0.00</strong></p></div>
- <p class="muted">Profit automatically 20% calculate hoga. Admin manually change kar sakta hai.</p>
- <button class="green" id="sendOrderButton" onclick="sendOrder()">SEND ORDER</button>
+ <div id="orderDraftRows"></div>
+ <button type="button" class="gray" onclick="addOrderDraftRow()">+ Add Another Order</button>
+ <p class="muted">Aik customer select karke ek sath multiple products ke orders bhej sakte hain. Har product ka order alag create hoga.</p>
+ <button class="green" id="sendOrderButton" onclick="sendOrder()">SEND ALL ORDERS</button>
  </div>
  <div class="cards">
  <div class="stat">Pending Orders Total<strong id="pendingOrdersTotal">$0.00</strong><span class="muted">Selected customer ke pending orders ki Product Price</span></div>
@@ -743,55 +740,92 @@ async function ordersPage(version=pageVersion){
  <button class="gray" onclick="loadOrders()">Refresh</button><div id="orderList"></div><button type="button" class="gray" id="adminRecentOrdersToggle" style="width:100%;margin-top:12px" onclick="toggleAdminRecentOrders()">Recently Orders ▾</button><div id="adminRecentOrders" style="display:none;margin-top:10px"></div></div>`,"orders",version);
  const customerSelect=document.getElementById("ocustomer"),filterSelect=document.getElementById("orderCustomerFilter");
  if(customerSelect)customerSelect.value=orderCustomerFilterId;if(filterSelect)filterSelect.value=orderCustomerFilterId;
- renderOrderProductOptions();calcOrder(true);await loadOrders();
+ addOrderDraftRow();await loadOrders();
 }
+let orderDraftRowCount=0;
 function syncOrderCustomerFilter(id){
  orderCustomerFilterId=String(id||"");const filter=document.getElementById("orderCustomerFilter");if(filter)filter.value=orderCustomerFilterId;loadOrders();
 }
-function renderOrderProductOptions(){
- const select=document.getElementById("oproduct");if(!select)return;
+function orderDraftOptions(){
  const customerId=val("ocustomer"),rows=customerProductRows.filter(x=>!customerId||String(x.customer_id)===customerId);
- select.innerHTML='<option value="">Select customer product</option>'+rows.map(x=>`<option value="${esc(x.id)}">${esc(x.product_name||"Product")} — ${money(x.price)}${customerId?"":" — "+esc(customerEmail(x.customer_id))}</option>`).join("");
+ return '<option value="">Select customer product</option>'+rows.map(x=>`<option value="${esc(x.id)}">${esc(x.product_name||"Product")} — ${money(x.price)}</option>`).join("");
+}
+function renderOrderProductOptions(){
+ document.querySelectorAll(".order-draft-product").forEach(select=>{
+  const previous=select.value;select.innerHTML=orderDraftOptions();
+  if([...select.options].some(o=>o.value===previous))select.value=previous;
+ });
+ document.querySelectorAll(".order-draft-row").forEach(row=>calcBatchOrder(row.querySelector(".order-draft-product")));
+}
+function addOrderDraftRow(){
+ const box=document.getElementById("orderDraftRows");if(!box)return;
+ const id=++orderDraftRowCount,div=document.createElement("div");
+ div.className="panel order-draft-row";div.dataset.rowId=String(id);
+ div.innerHTML=`<h3>Order ${id}</h3>
+ <label>Customer Added Product</label><select class="order-draft-product" onchange="calcBatchOrder(this)">${orderDraftOptions()}</select>
+ <label>Quantity</label><input class="order-draft-qty" type="number" min="1" step="1" value="1" oninput="calcBatchOrder(this)">
+ <label>Admin Profit (20% automatic - manually editable)</label><input class="order-draft-profit" type="number" min="0" step="0.01" value="0" data-auto="1" oninput="this.dataset.auto='0';calcBatchOrder(this)">
+ <div class="order-calculation"><p>Product Price <strong class="draft-price">$0.00</strong></p><p>Profit <strong class="draft-profit">$0.00</strong></p><p>Expected Return <strong class="draft-return">$0.00</strong></p></div>
+ <button type="button" class="gray" onclick="removeOrderDraftRow(this)">Remove Order</button>`;
+ box.appendChild(div);calcBatchOrder(div.querySelector(".order-draft-product"));
+}
+function removeOrderDraftRow(button){
+ const rows=document.querySelectorAll(".order-draft-row");if(rows.length<=1)return note("Kam az kam aik order row rehna zaroori hai.",true);
+ button.closest(".order-draft-row")?.remove();
+}
+function calcBatchOrder(control){
+ const row=control?.classList?.contains("order-draft-row")?control:control?.closest?.(".order-draft-row");
+ if(!row)return;
+ const product=customerProductRows.find(x=>String(x.id)===row.querySelector(".order-draft-product")?.value);
+ const qty=Number(row.querySelector(".order-draft-qty")?.value),validQty=Number.isInteger(qty)&&qty>0?qty:0;
+ const price=Number(product?.price||0)*validQty,profitInput=row.querySelector(".order-draft-profit");
+ if(profitInput?.dataset.auto!=="0")profitInput.value=money(price*.20);
+ const profit=Number(profitInput?.value||0);
+ row.querySelector(".draft-price").textContent="$"+money(price);
+ row.querySelector(".draft-profit").textContent="$"+money(profit);
+ row.querySelector(".draft-return").textContent="$"+money(price+profit);
 }
 function applyOrderCustomerFilter(id){
  orderCustomerFilterId=String(id||"");const customer=document.getElementById("ocustomer");if(customer)customer.value=orderCustomerFilterId;
- const filter=document.getElementById("orderCustomerFilter");if(filter)filter.value=orderCustomerFilterId;loadOrders();
-}
-function calcOrder(resetProfit=false){
- const p=customerProductRows.find(x=>String(x.id)===val("oproduct")),qty=Number(val("oqty")),validQty=Number.isInteger(qty)&&qty>0?qty:0,productPrice=Number(p?.price||0)*validQty,profitInput=document.getElementById("oprofit");
- if(!profitInput)return;if(resetProfit||!profitEdited)profitInput.value=money(productPrice*.20);
- const profit=Number(profitInput.value||0);
- document.getElementById("productPrice").textContent="$"+money(productPrice);
- document.getElementById("profitDisplay").textContent="$"+money(profit);
- document.getElementById("expectedReturn").textContent="$"+money(productPrice+profit);
+ const filter=document.getElementById("orderCustomerFilter");if(filter)filter.value=orderCustomerFilterId;renderOrderProductOptions();loadOrders();
 }
 async function sendOrder(){
- const cid=val("ocustomer"),pid=val("oproduct"),qty=Number(val("oqty")),p=customerProductRows.find(x=>String(x.id)===pid);
- if(!cid||!p||String(p.customer_id)!==cid||!Number.isInteger(qty)||qty<1)return note("Customer select karein aur us customer ka added product choose karein.",true);
- const unitPrice=Number(p.price);if(!Number.isFinite(unitPrice)||unitPrice<0)return note("Product ki price valid nahi hai.",true);
- const total=unitPrice*qty,profit=Number(val("oprofit"));if(!Number.isFinite(profit)||profit<0)return note("Profit amount check karein.",true);
+ const cid=val("ocustomer"),rows=[...document.querySelectorAll(".order-draft-row")];
+ if(!cid)return note("Pehle customer select karein.",true);
+ if(!rows.length)return note("Kam az kam aik order add karein.",true);
+ const batch=[],used=new Set();
+ for(const row of rows){
+  const pid=row.querySelector(".order-draft-product")?.value,qty=Number(row.querySelector(".order-draft-qty")?.value),p=customerProductRows.find(x=>String(x.id)===pid),profit=Number(row.querySelector(".order-draft-profit")?.value);
+  if(!p||String(p.customer_id)!==cid||!Number.isInteger(qty)||qty<1)return note("Har order ke liye isi customer ka product aur valid quantity select karein.",true);
+  if(used.has(String(p.id)))return note("Aik hi customer product ko batch mein dobara select na karein.",true);
+  if(!Number.isFinite(Number(p.price))||Number(p.price)<0||!Number.isFinite(profit)||profit<0)return note("Product price ya profit amount check karein.",true);
+  used.add(String(p.id));batch.push({p,qty,unitPrice:Number(p.price),total:Number(p.price)*qty,profit});
+ }
  const b=document.getElementById("sendOrderButton");if(!b)return;b.disabled=true;
- const orderedAt=new Date().toISOString();let orderId=null,claimed=false;
+ const claimed=[],created=[];
  try{
-  const claim=await db.from("customer_products").update({ordered_at:orderedAt}).eq("id",p.id).is("ordered_at",null).select("id").maybeSingle();
-  if(claim.error)throw claim.error;
-  if(!claim.data){
-   customerProductRows=customerProductRows.filter(x=>String(x.id)!==String(p.id));renderOrderProductOptions();
-   throw new Error("This customer product has already been ordered and cannot be sent again.");
+  for(const item of batch){
+   const orderedAt=new Date().toISOString();
+   const claim=await db.from("customer_products").update({ordered_at:orderedAt}).eq("id",item.p.id).is("ordered_at",null).select("id").maybeSingle();
+   if(claim.error)throw claim.error;
+   if(!claim.data)throw new Error("Selected customer product pehle hi order ho chuka hai. Refresh karke dobara try karein.");
+   claimed.push({id:item.p.id,orderedAt});
+   const o=await db.from("orders").insert({customer_id:cid,status:"pending",total_amount:item.total,admin_profit:item.profit}).select("id").single();
+   if(o.error)throw o.error;
+   created.push(o.data.id);
+   const it=await db.from("order_items").insert({order_id:o.data.id,product_id:item.p.product_id,product_name:item.p.product_name||"Product",quantity:item.qty,unit_price:item.unitPrice});
+   if(it.error)throw it.error;
   }
-  claimed=true;
-  const o=await db.from("orders").insert({customer_id:cid,status:"pending",total_amount:total,admin_profit:profit}).select("id").single();if(o.error)throw o.error;orderId=o.data.id;
-  const it=await db.from("order_items").insert({order_id:orderId,product_id:p.product_id,product_name:p.product_name||"Product",quantity:qty,unit_price:unitPrice});
-  if(it.error)throw it.error;
-  customerProductRows=customerProductRows.filter(x=>String(x.id)!==String(p.id));
+  const sentIds=new Set(batch.map(x=>String(x.p.id)));
+  customerProductRows=customerProductRows.filter(x=>!sentIds.has(String(x.id)));
   orderCustomerFilterId=String(cid);const filter=document.getElementById("orderCustomerFilter");if(filter)filter.value=orderCustomerFilterId;
-  note("Order sent. This product has been removed from the available list and cannot be ordered again.");
-  document.getElementById("oproduct").value="";document.getElementById("oqty").value="1";profitEdited=false;calcOrder(true);
-  renderOrderProductOptions();
+  note(batch.length+" orders successfully sent. Selected products are removed from the available list.");
+  const draftBox=document.getElementById("orderDraftRows");if(draftBox)draftBox.innerHTML="";
+  addOrderDraftRow();renderOrderProductOptions();
   if(current==="orders")await loadOrders();
  }catch(e){
-  if(orderId)await db.from("orders").delete().eq("id",orderId);
-  if(claimed)await db.from("customer_products").update({ordered_at:null}).eq("id",p.id).eq("ordered_at",orderedAt);
+  for(const id of created.reverse())await db.from("orders").delete().eq("id",id);
+  for(const item of claimed.reverse())await db.from("customer_products").update({ordered_at:null}).eq("id",item.id).eq("ordered_at",item.orderedAt);
   note("Order save error: "+e.message,true);
  }finally{const btn=document.getElementById("sendOrderButton");if(btn)btn.disabled=false}
 }
