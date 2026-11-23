@@ -1150,7 +1150,7 @@ async function deleteCustomerAccount(id){
  const label=(c.full_name||"Customer")+" ("+(c.email||id)+")";
  if(!confirm("Permanently delete "+label+"?\n\nThis will delete the customer's account and related records. This action cannot be undone."))return;
  try{
-  const {data,error}=await db.functions.invoke("admin-delete-customer",{body:{customer_id:id}});
+  const {data,error}=await db.functions.invoke("admin-delete-customer",{body:{customer_id:id,expected_email:c.email}});
   if(error)throw error;
   if(data?.error)throw new Error(data.error);
   if(!data?.success)throw new Error("Delete function did not confirm success.");
