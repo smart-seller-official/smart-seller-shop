@@ -1725,20 +1725,59 @@ window.logout=async function(){
  $("loginForm").reset();showLogin();
 };
 
+let accountCheckInProgress=false;
+async function forceDeletedCustomerLogout(){
+ try{await db.auth.signOut({scope:"local"});}catch(e){console.warn("Local logout:",e);}
+ currentUser=null;isKycApproved=false;
+ $("dashboard").classList.add("hidden");$("bottomNav").classList.add("hidden");$("authArea").classList.remove("hidden");
+ $("loginForm").reset();showLogin();
+ msg("This account has been deleted by admin. You have been logged out.");
+}
+async function verifyCustomerAccount(){
+ if(!currentUser||accountCheckInProgress)return true;
+ accountCheckInProgress=true;
+ try{
+  const {data,error}=await db.auth.getUser();
+  const invalidStatus=error&&[401,403,404].includes(Number(error.status));
+  const missingUser=!error&&!data?.user;
+  const deletedUser=error&&(error.code==="user_not_found"||/user.*(not found|does not exist)|user from sub claim.*not exist/i.test(error.message||""));
+  if(invalidStatus||missingUser||deletedUser){
+   await forceDeletedCustomerLogout();
+   return false;
+  }
+ }catch(err){console.warn("Account verification temporarily unavailable:",err);}
+ finally{accountCheckInProgress=false;}
+ return !!currentUser;
+}
+
 db.auth.onAuthStateChange((event,session)=>{
  if(event==="PASSWORD_RECOVERY")showNewPassword();
 });
 
-setInterval(()=>{
- if(currentUser&&$("ordersList"))loadOrders();
- if(currentUser)refreshCustomerBadges();
+setInterval(async()=>{
+ if(currentUser){
+  if(!await verifyCustomerAccount())return;
+  if($("ordersList"))loadOrders();
+  refreshCustomerBadges();
+ }
 },15000);
+window.addEventListener("focus",()=>{verifyCustomerAccount();});
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)verifyCustomerAccount();});
 
 (async()=>{
  try{
   const {data,error}=await db.auth.getSession();
   if(error)throw error;
-  if(data.session)await loadDashboard(data.session.user);
+  if(data.session){
+   const {data:userData,error:userError}=await db.auth.getUser();
+   if(userError&&( [401,403,404].includes(Number(userError.status)) || userError.code==="user_not_found" )){
+    await forceDeletedCustomerLogout();
+   }else if(userData?.user){
+    await loadDashboard(userData.user);
+   }else{
+    await loadDashboard(data.session.user);
+   }
+  }
  }catch(err){msg("Session error: "+err.message)}
 })();
 </script>
