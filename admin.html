@@ -1268,9 +1268,7 @@ function supportCustomerEmail(id){
 async function supportPage(version=pageVersion){
  await loadCustomers();
  if(!pageIs("support_messages",version))return;
- const customerResult=await db.from("profiles").select("id,full_name,email").limit(1000);
- if(customerResult.error)throw customerResult.error;
- supportCustomers=customerResult.data||[];
+ supportCustomers=customers.map(c=>({id:c.id,full_name:c.full_name,email:c.email}));
  const approvedResult=await db.from("kyc_submissions").select("customer_id").ilike("status","approved").limit(1000);
  if(approvedResult.error)throw approvedResult.error;
  supportApprovedCustomerIds=new Set((approvedResult.data||[]).map(x=>String(x.customer_id||"").trim()).filter(Boolean));
@@ -1304,7 +1302,7 @@ function renderSupportCustomers(){
  if(!box)return;
  const groups=makeSupportGroups();
  const q=(document.getElementById("supportSearch")?.value||"").toLowerCase();
- const ids=[...new Set([...Object.keys(groups),...supportApprovedCustomerIds])].filter(id=>{
+ const ids=[...new Set([...Object.keys(groups),...supportApprovedCustomerIds,...supportCustomers.map(c=>String(c.id)),...customers.map(c=>String(c.id))])].filter(id=>{
   const msgs=groups[id]||[];
   const unread=msgs.filter(m=>String(m.sender_role||m.sender||"").toLowerCase()==="customer"&&!m.read_at).length;
   return (String(supportCustomerName(id))+" "+supportCustomerEmail(id)).toLowerCase().includes(q);
@@ -1328,6 +1326,8 @@ async function refreshSupportMessages(force=false){
  if(current!=="support_messages"||supportRefreshing)return;
  supportRefreshing=true;
  try{
+  await loadCustomers();
+  supportCustomers=customers.map(c=>({id:c.id,full_name:c.full_name,email:c.email}));
   const r=await db.from("support_chat_messages").select("*").order("created_at",{ascending:true}).limit(1000);
   if(r.error)throw r.error;
   const next=r.data||[],signature=JSON.stringify(next);
