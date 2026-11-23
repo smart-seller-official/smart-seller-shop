@@ -744,7 +744,7 @@ async function ordersPage(version=pageVersion){
   <button class="green" id="sendOrderButton" style="width:100%;margin:0" onclick="sendOrder()">SEND SELECTED ORDERS</button>
  </div>
  <p class="muted">Products ke saamne checkbox mark karein. Har selected product ki quantity aur admin profit yahin set karein.</p>
- <div id="orderDraftRows"><p class="muted">Pehle customer select karein. Uske tamam available products yahan list mein aa jayenge.</p></div>
+ <div id="orderDraftRows" style="max-height:min(55vh,420px);overflow-y:auto;overscroll-behavior:contain;padding-right:6px"><p class="muted">Pehle customer select karein. Uske tamam available products yahan list mein aa jayenge.</p></div>
  </div>
  <div class="cards">
  <div class="stat">Pending Orders Total<strong id="pendingOrdersTotal">$0.00</strong><span class="muted">Selected customer ke pending orders ki Product Price</span></div>
