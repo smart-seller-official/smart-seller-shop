@@ -29,11 +29,11 @@ aside button.active,aside button:hover{background:#34445f;color:#7ee6d2}.admin-n
 .kyc-customer-group[open] .kyc-expand-label{display:none}
 .kyc-requests{padding:0 8px 5px}
 .kyc-requests .kyc-row{margin-bottom:5px}
-main{padding:20px;flex:1;min-width:0;background-image:linear-gradient(115deg,rgba(12,25,48,.82),rgba(26,48,77,.58)),url('https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=2000&q=85');background-size:cover;background-position:center;background-attachment:fixed}
+main{padding:0 20px 20px;flex:1;min-width:0;background-image:linear-gradient(115deg,rgba(12,25,48,.82),rgba(26,48,77,.58)),url('https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=2000&q=85');background-size:cover;background-position:center;background-attachment:fixed}
 .panel,.stat{background:white;padding:16px;border-radius:11px;margin-bottom:14px;box-shadow:0 2px 9px #17243b0c}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
 .stat strong{display:block;font-size:25px;color:#6256cf;margin-top:7px}\n.dashboard-stat{cursor:pointer;transition:transform .15s,box-shadow .15s}\n.dashboard-stat:hover,.dashboard-stat:focus{transform:translateY(-2px);box-shadow:0 4px 14px #17243b20;outline:2px solid #6256cf}
-.dashboard-page{min-height:calc(100vh - 100px);margin:-20px;padding:28px;background-image:linear-gradient(115deg,rgba(12,25,48,.82),rgba(26,48,77,.58)),url('https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=2000&q=85');background-size:cover;background-position:center;background-attachment:fixed;border-radius:0 0 12px 12px}.dashboard-page>h2{color:#fff;font-size:28px;margin:0 0 22px;text-shadow:0 2px 8px #0008}.dashboard-page .cards{gap:16px}.dashboard-page .dashboard-stat{min-height:145px;padding:20px;border:1px solid rgba(255,255,255,.65);border-radius:15px;background:rgba(255,255,255,.92);box-shadow:0 8px 24px rgba(0,0,0,.2);backdrop-filter:blur(8px);color:#263750;font-size:15px;font-weight:700}.dashboard-page .dashboard-stat strong{font-size:34px;margin-top:14px;color:#5145c5}.dashboard-page .stat-hint{margin-top:8px;color:#68778d;font-weight:500}.dashboard-page .dashboard-stat:hover,.dashboard-page .dashboard-stat:focus{transform:translateY(-4px);box-shadow:0 14px 30px rgba(0,0,0,.28);outline:2px solid #a9d8ff}\n.stat-hint{display:block;font-size:11px;color:#77849a;margin-top:6px}
+.dashboard-page{min-height:calc(100vh - 100px);margin:0 -20px -20px;padding:8px 28px 28px;background-image:linear-gradient(115deg,rgba(12,25,48,.82),rgba(26,48,77,.58)),url('https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=2000&q=85');background-size:cover;background-position:center;background-attachment:fixed;border-radius:0 0 12px 12px}.dashboard-page>h2{color:#fff;font-size:28px;margin:0 0 22px;text-shadow:0 2px 8px #0008}.dashboard-page .cards{gap:16px}.dashboard-page .dashboard-stat{min-height:145px;padding:20px;border:1px solid rgba(255,255,255,.65);border-radius:15px;background:rgba(255,255,255,.92);box-shadow:0 8px 24px rgba(0,0,0,.2);backdrop-filter:blur(8px);color:#263750;font-size:15px;font-weight:700}.dashboard-page .dashboard-stat strong{font-size:34px;margin-top:14px;color:#5145c5}.dashboard-page .stat-hint{margin-top:8px;color:#68778d;font-weight:500}.dashboard-page .dashboard-stat:hover,.dashboard-page .dashboard-stat:focus{transform:translateY(-4px);box-shadow:0 14px 30px rgba(0,0,0,.28);outline:2px solid #a9d8ff}\n.stat-hint{display:block;font-size:11px;color:#77849a;margin-top:6px}
 .tablewrap{overflow:auto}
 table{width:100%;border-collapse:collapse;font-size:13px;min-width:550px}
 td,th{text-align:left;padding:4px 8px;border-bottom:1px solid #e6eaf0;vertical-align:top}
@@ -100,8 +100,9 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere}
 aside{width:100%;display:none}
 aside.open{display:block}
 #toggle{display:inline-block}
-main{padding:12px}
+main{padding:0 12px 12px}
 }
+.dashboard-page{margin:0 -12px -12px;padding:8px 16px 16px}
 
 /* Compact spacing for selected admin sections only */
 .compact-admin-page main{padding:6px 8px}
