@@ -1255,7 +1255,7 @@ async function sendReply(){
   if(refreshed.error)throw refreshed.error;
   supportMessages=refreshed.data||[];supportLastSignature=JSON.stringify(supportMessages);makeSupportGroups();
   if(current==="support_messages"&&activeSupportCustomerId===customerId)openSupportChat(customerId,false);
- }catch(e){note("Message error: "+e.message,true);if(btn){btn.disabled=false;btn.textContent="Send Reply";}}
+ }catch(e){note("Message error: "+e.message,true);if(btn){btn.disabled=false;btn.textContent="➤";}}
  finally{sendingReplyIds.delete(customerId);}
 }
 
