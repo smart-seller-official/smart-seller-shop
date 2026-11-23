@@ -464,6 +464,75 @@ body.chat-open .chat-scroll{min-height:0;overscroll-behavior:contain}
 #productsPage #shopList .product-image,#productsPage #myProductsList .product-image{height:70px}
 #productsPage .my-products-count{margin:0 0 5px;padding:7px 9px}
 
+
+/* Customer Products: tight spacing and equal-sized cards in Shop and My Products */
+#productsPage .tabs{margin:0 0 4px!important}
+#productsPage #shopPanel,#productsPage #myProductsPanel{margin:0!important;padding:0!important}
+#productsPage #shopList,#productsPage #myProductsList{
+ display:grid!important;
+ grid-template-columns:repeat(3,minmax(0,1fr))!important;
+ grid-auto-rows:1fr!important;
+ gap:4px!important;
+ margin:0!important;
+ padding:0!important;
+ align-items:stretch!important;
+}
+#productsPage #shopList>.product-card,
+#productsPage #myProductsList>.product-card{
+ box-sizing:border-box!important;
+ width:100%!important;
+ min-width:0!important;
+ height:190px!important;
+ min-height:190px!important;
+ max-height:190px!important;
+ margin:0!important;
+ padding:6px!important;
+ display:flex!important;
+ flex-direction:column!important;
+ gap:0!important;
+ overflow:hidden!important;
+}
+#productsPage #shopList>.product-card .product-image,
+#productsPage #myProductsList>.product-card .product-image{
+ display:block!important;
+ width:100%!important;
+ height:82px!important;
+ min-height:82px!important;
+ max-height:82px!important;
+ flex:0 0 82px!important;
+ margin:0!important;
+ object-fit:cover!important;
+}
+#productsPage #shopList>.product-card h3,
+#productsPage #myProductsList>.product-card h3{
+ display:-webkit-box!important;
+ -webkit-box-orient:vertical!important;
+ -webkit-line-clamp:2!important;
+ overflow:hidden!important;
+ min-height:24px!important;
+ max-height:28px!important;
+ margin:4px 0 2px!important;
+ line-height:1.2!important;
+}
+#productsPage #shopList>.product-card p.small,
+#productsPage #myProductsList>.product-card p.small{
+ overflow:hidden!important;
+ white-space:nowrap!important;
+ text-overflow:ellipsis!important;
+ margin:1px 0 2px!important;
+ line-height:1.2!important;
+}
+#productsPage #shopList>.product-card .product-price,
+#productsPage #myProductsList>.product-card .product-price{
+ margin:2px 0!important;
+ line-height:1.2!important;
+}
+#productsPage #shopList>.product-card button,
+#productsPage #myProductsList>.product-card button{
+ flex:0 0 auto!important;
+ margin-top:auto!important;
+}
+
 </style>
 </head>
 <body>
