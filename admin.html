@@ -429,35 +429,53 @@ async function openKycCustomer(id){
 function closeKycCustomer(){document.getElementById("kycCustomerModal").style.display="none"}
 
 /* WITHDRAWAL: ONLY CUSTOMER + WITHDRAWAL DETAILS */
-async function openWithdrawalCustomer(customerId,withdrawalId){
+async function openWithdrawalCustomer(customerId){
  const modal=document.getElementById("withdrawalCustomerModal");
  const box=document.getElementById("withdrawalCustomerContent");
- modal.style.display="block";box.innerHTML="Loading withdrawal details...";
+ modal.style.display="block";box.innerHTML="Loading complete withdrawal history...";
  try{
   const [pr,wr]=await Promise.all([
    db.from("profiles").select("*").eq("id",customerId).maybeSingle(),
-   db.from("withdrawals").select("*").eq("id",withdrawalId).eq("customer_id",customerId).maybeSingle()
+   db.from("withdrawals").select("*").eq("customer_id",customerId).order("created_at",{ascending:false}).limit(1000)
   ]);
   if(pr.error)throw pr.error;if(wr.error)throw wr.error;
-  const p=pr.data||{},w=wr.data;
-  if(!w)throw new Error("Withdrawal request not found.");
-  const account=typeof w.account_details==="object"?JSON.stringify(w.account_details,null,2):w.account_details;
+  const p=pr.data||{},items=wr.data||[];
+  const counts=items.reduce((a,w)=>{
+   const s=String(w.status||"pending").trim().toLowerCase();
+   a.total++;
+   if(s==="approved"||s==="completed")a.approved++;
+   else if(s==="rejected")a.rejected++;
+   else if(s==="pending")a.pending++;
+   return a;
+  },{total:0,approved:0,rejected:0,pending:0});
+  const history=items.map((w,i)=>{
+   const account=typeof w.account_details==="object"?JSON.stringify(w.account_details):String(w.account_details||"");
+   return `<tr>
+    <td>${i+1}</td><td>${money(w.amount)}</td><td>${esc(w.method||"—")}</td>
+    <td>${esc(w.status||"Pending")}</td><td>${esc(w.created_at?new Date(w.created_at).toLocaleString():"—")}</td>
+    <td>${esc(w.admin_note||"—")}</td><td>${esc(w.payment_reference||"—")}</td>
+    <td><pre>${esc(account||"—")}</pre></td>
+   </tr>`;
+  }).join("");
   box.innerHTML=`
-   <h2>Withdrawal Customer Details</h2>
+   <h2>Complete Withdrawal History</h2>
    <h3>Customer Information</h3>
    <div class="profile-grid">
     <div class="profile-field"><b>NAME</b><p>${esc(p.full_name||"Name not available")}</p></div>
     <div class="profile-field"><b>GMAIL</b><p>${esc(p.email||"Email not available")}</p></div>
     <div class="profile-field"><b>PHONE</b><p>${esc(p.phone||"Phone not available")}</p></div>
    </div>
-   <h3>Withdrawal Information</h3>
+   <h3>Withdrawal Summary</h3>
    <div class="profile-grid">
-    <div class="profile-field"><b>AMOUNT</b><p>$${money(w.amount)}</p></div>
-    <div class="profile-field"><b>PAYMENT METHOD</b><p>${esc(w.method||"Not available")}</p></div>
-    <div class="profile-field"><b>STATUS</b><p>${esc(w.status||"Pending")}</p></div>
-    <div class="profile-field"><b>REQUEST DATE</b><p>${esc(w.created_at||"")}</p></div>
+    <div class="profile-field"><b>TOTAL WITHDRAWALS</b><p>${counts.total}</p></div>
+    <div class="profile-field"><b>APPROVED</b><p>${counts.approved}</p></div>
+    <div class="profile-field"><b>REJECTED</b><p>${counts.rejected}</p></div>
+    <div class="profile-field"><b>PENDING</b><p>${counts.pending}</p></div>
    </div>
-   <div class="profile-field"><b>ACCOUNT DETAILS</b><pre>${esc(account||"Not available")}</pre></div>`;
+   <h3>All Withdrawal Records</h3>
+   <div class="tablewrap"><table><thead><tr><th>#</th><th>Amount</th><th>Method</th><th>Status</th><th>Request Date</th><th>Admin Note</th><th>Payment Reference</th><th>Account Details</th></tr></thead><tbody>${history}</tbody></table></div>
+   ${items.length?"":"<p class='muted'>No withdrawal history found.</p>"}
+  `;
  }catch(e){box.innerHTML="<p class='error'>"+esc(e.message)+"</p>"}
 }
 function closeWithdrawalCustomer(){document.getElementById("withdrawalCustomerModal").style.display="none"}
@@ -937,29 +955,45 @@ async function walletHistory(){
 
 /* WITHDRAWALS */
 async function withdrawalsPage(version=pageVersion){
- await loadCustomers();if(!pageIs("withdrawals",version))return;
- const r=await db.from("withdrawals").select("*").order("created_at",{ascending:false}).limit(300);
+ if(!pageIs("withdrawals",version))return;
+ const r=await db.from("withdrawals").select("*").order("created_at",{ascending:false}).limit(1000);
  if(r.error)throw r.error;if(!pageIs("withdrawals",version))return;
- putContent(`<h2>Withdrawals</h2><button class="gray" onclick="withdrawalsPage()">Refresh Requests</button><div id="withdrawList"></div>`,"withdrawals",version);
- const target=document.getElementById("withdrawList");if(!target)return;
- const pendingRows=(r.data||[]).filter(x=>String(x.status||"").trim().toLowerCase()==="pending");
+ const rows=r.data||[];
+ const customerIds=[...new Set(rows.map(x=>String(x.customer_id||"")).filter(Boolean))];
+ let profileRows=[];
+ if(customerIds.length){
+  const pr=await db.from("profiles").select("id,full_name,email").in("id",customerIds);
+  if(pr.error)throw pr.error;
+  profileRows=pr.data||[];
+ }
+ const profileMap=new Map(profileRows.map(p=>[String(p.id),p]));
  const groups=new Map();
- pendingRows.forEach(x=>{
+ rows.forEach(x=>{
   const id=String(x.customer_id||"unknown");
   if(!groups.has(id))groups.set(id,[]);
   groups.get(id).push(x);
  });
+ putContent(`<h2>Withdrawals</h2><p class="muted">Har us customer ka naam yahan show hota hai jis ne kabhi withdrawal request ki ho. Naam par click karke uski complete history dekhein.</p><button class="gray" onclick="withdrawalsPage()">Refresh</button><div id="withdrawList"></div>`,"withdrawals",version);
+ const target=document.getElementById("withdrawList");if(!target)return;
  target.innerHTML=Array.from(groups.entries()).map(([id,items])=>{
-  const customer=customers.find(c=>String(c.id)===id);
-  const pending=items.filter(x=>String(x.status||"").toLowerCase().trim()==="pending").length;
-  const latest=items[0]||{};
+  const customer=profileMap.get(id)||{};
+  const counts=items.reduce((a,x)=>{
+   const s=String(x.status||"pending").trim().toLowerCase();
+   a.total++;
+   if(s==="approved"||s==="completed")a.approved++;
+   else if(s==="rejected")a.rejected++;
+   else if(s==="pending")a.pending++;
+   return a;
+  },{total:0,approved:0,rejected:0,pending:0});
   return `<div class="kyc-row">
-   <span class="kyc-customer" onclick="openCustomerProfile('${esc(id)}')">${esc(customer?.full_name||"Name not available")} — ${esc(customer?.email||"Email not available")}</span>
-   <span>${pending} pending withdrawal${pending===1?"":"s"}</span>
-   <span>Latest pending: ${money(latest.amount)}</span>
-   <button class="gray" onclick="openCustomerProfile('${esc(id)}')">Open Full History</button>
+   <span class="kyc-customer" onclick="openWithdrawalCustomer('${esc(id)}')">${esc(customer.full_name||"Name not available")} — ${esc(customer.email||"Email not available")}</span>
+   <span>${counts.total} total</span>
+   <span class="ok">${counts.approved} approved</span>
+   <span class="error">${counts.rejected} rejected</span>
+   <span>${counts.pending} pending</span>
+   <button class="gray" onclick="openWithdrawalCustomer('${esc(id)}')">Full History</button>
   </div>`;
- }).join("")||"No pending withdrawal requests.";
+ }).join("")||"No withdrawal records found.";
 }
 async function withdrawStatus(id,status,customerId=null){
  if(!["completed","rejected"].includes(status))return note("Invalid withdrawal status.",true);
