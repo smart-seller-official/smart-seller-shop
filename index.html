@@ -333,6 +333,79 @@ body:has(#dashboard:not(.hidden)) main{max-width:1120px;padding:30px 26px 110px}
 body:has(#dashboard:not(.hidden)) #bottomNav{background:#10243d;border-top:2px solid #c9a85f;box-shadow:0 -8px 25px #10243d20}
 body:has(#dashboard:not(.hidden)) #bottomNav button{color:#c3ceda;font-weight:700}
 body:has(#dashboard:not(.hidden)) #bottomNav button.active{background:#dfbd73;color:#142a45}
+
+/* Smart Seller customer panel: compact official sizing update */
+body:has(#dashboard:not(.hidden))>header{height:68px;padding-left:max(18px,calc((100% - 1040px)/2));padding-right:max(18px,calc((100% - 1040px)/2))}
+body:has(#dashboard:not(.hidden)) .logo{font-size:20px!important;letter-spacing:1px!important}
+body:has(#dashboard:not(.hidden)) main{max-width:1040px;padding:22px 20px 94px}
+#dashboard{font-size:13px}
+#dashboard .page-title{margin:5px 0 17px}
+#dashboard .page-title h2{font-size:25px;line-height:1.2;margin-bottom:6px}
+#dashboard .page-title p{font-size:12px}
+#dashboard .card,#dashboard .product-card,#dashboard .data-card{padding:13px;border-radius:14px}
+#dashboard .stats{gap:12px}
+#dashboard .stat{min-height:154px;padding:15px;border-radius:15px}
+#dashboard .stat-icon{width:40px;height:40px;font-size:20px;margin-bottom:10px}
+#dashboard .stat .stat-label{font-size:11px}
+#dashboard .stat strong{font-size:23px;margin:7px 0 12px}
+#dashboard .stat button{min-height:35px;padding:8px 12px;font-size:11px}
+#dashboard .stat:first-child{min-height:154px}
+#dashboard .stat:first-child strong{font-size:26px}
+#dashboard .bottom-nav{padding-top:7px;padding-bottom:calc(7px + env(safe-area-inset-bottom))}
+#dashboard .bottom-nav button{font-size:10px;padding:5px 1px}
+#dashboard .bottom-nav button span{font-size:19px;margin-bottom:2px}
+#dashboard .page:not(#homePage) .page-title h2{font-size:23px}
+#dashboard .tabs{gap:6px;margin:10px 0}
+#dashboard .tabs button{padding:9px 10px;font-size:12px}
+#dashboard input,#dashboard select,#dashboard textarea{font-size:13px;padding:11px;margin:6px 0}
+#dashboard button{font-size:12px;padding:10px 12px}
+#dashboard #shopList,#dashboard #myProductsList{gap:9px}
+#dashboard #shopList .product-card,#dashboard #myProductsList .product-card{padding:8px;border-radius:12px}
+#dashboard #shopList .product-image,#dashboard #myProductsList .product-image{height:122px}
+#dashboard #shopList .product-card h3,#dashboard #myProductsList .product-card h3{font-size:11px}
+#dashboard #shopList .product-price,#dashboard #myProductsList .product-price{font-size:13px}
+#dashboard #shopList .product-card button,#dashboard #myProductsList .product-card button{font-size:10px;padding:7px 4px}
+#walletPage{gap:10px}
+#walletPage>.stat{padding:13px;border-radius:13px;font-size:12px}
+#walletPage>.stat strong{font-size:22px}
+@media(max-width:700px){
+ body:has(#dashboard:not(.hidden))>header{height:60px;padding:0 13px}
+ body:has(#dashboard:not(.hidden)) .logo{font-size:17px!important;letter-spacing:.8px!important}
+ body:has(#dashboard:not(.hidden)) main{padding:15px 11px 88px;max-width:520px}
+ #dashboard .page-title{margin:3px 0 13px}
+ #dashboard .page-title h2{font-size:22px}
+ #dashboard .page-title p{font-size:11px}
+ #dashboard .stats{gap:9px}
+ #dashboard .stat{min-height:136px;padding:11px 10px;border-radius:13px}
+ #dashboard .stat-icon{width:34px;height:34px;font-size:18px;margin-bottom:8px;border-radius:10px}
+ #dashboard .stat .stat-label{font-size:9px;letter-spacing:.3px}
+ #dashboard .stat strong{font-size:19px;margin:6px 0 9px}
+ #dashboard .stat button{min-height:31px;padding:7px 5px;font-size:9px}
+ #dashboard .stat:first-child{min-height:138px;padding:14px}
+ #dashboard .stat:first-child strong{font-size:24px}
+ #dashboard .stat:first-child button{min-width:105px;padding:8px 12px;font-size:10px}
+ #dashboard .card,#dashboard .product-card,#dashboard .data-card{padding:11px;border-radius:13px}
+ #dashboard .page:not(#homePage) .page-title h2{font-size:21px}
+ #dashboard .tabs button{padding:8px 6px;font-size:11px}
+ #dashboard #shopList,#dashboard #myProductsList{gap:7px}
+ #dashboard #shopList .product-card,#dashboard #myProductsList .product-card{padding:6px;border-radius:10px}
+ #dashboard #shopList .product-image,#dashboard #myProductsList .product-image{height:88px}
+ #dashboard #shopList .product-card h3,#dashboard #myProductsList .product-card h3{font-size:10px;line-height:1.2}
+ #dashboard #shopList .product-price,#dashboard #myProductsList .product-price{font-size:12px}
+ #dashboard #shopList .product-card button,#dashboard #myProductsList .product-card button{font-size:9px;padding:6px 3px}
+ #dashboard .bottom-nav{padding:6px 2px calc(6px + env(safe-area-inset-bottom))}
+ #dashboard .bottom-nav button{font-size:9px;padding:4px 0}
+ #dashboard .bottom-nav button span{font-size:18px}
+ #walletPage{gap:8px}
+ #walletPage>.stat{padding:11px 9px;font-size:11px}
+ #walletPage>.stat strong{font-size:19px}
+}
+@media(max-width:360px){
+ #dashboard .stat{padding:10px 8px}
+ #dashboard .stat strong{font-size:17px}
+ #dashboard #shopList .product-image,#dashboard #myProductsList .product-image{height:78px}
+}
+
 </style>
 </head>
 <body>
