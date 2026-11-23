@@ -1107,15 +1107,10 @@ function orderStatus(o){
  return s.toUpperCase();
 }
 function orderProgress(status){
- const current=orderStatus({status});
- const stages=["PICKED","PROCESSING","SHIPPING","COMPLETE"];
- const index=stages.indexOf(current);
- return stages.map((stage,i)=>{
-  const step=document.createElement("span");
-  step.className="order-step"+(i<index?" done":i===index?" active":"");
-  step.textContent=stage;
-  return step;
- });
+ const step=document.createElement("span");
+ step.className="order-step active";
+ step.textContent=orderStatus({status});
+ return [step];
 }
 
 async function getWalletSummary(){
