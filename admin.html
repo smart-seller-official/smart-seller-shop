@@ -1154,14 +1154,18 @@ async function supportPage(version=pageVersion){
  if(r.error)throw r.error;
  if(!pageIs("support_messages",version))return;
  supportMessages=r.data||[];
- activeSupportCustomerId=null;
  supportLastSignature=JSON.stringify(supportMessages);
+ try{activeSupportCustomerId=sessionStorage.getItem("smartSellerActiveSupportCustomer")||null;}catch(e){activeSupportCustomerId=null;}
  putContent(`<h2>Customer Service Chat</h2>
  <p class="muted">Customer ka Gmail select karke chat open karein. Naye messages automatically refresh honge.</p>
  <button class="gray" onclick="refreshSupportMessages(true)">Refresh Messages</button>
  <input id="supportSearch" placeholder="Search customer name or Gmail" oninput="filterSupportCustomers()">
  <div id="supportCustomerList"></div>`,"support_messages",version);
  renderSupportCustomers();
+ if(activeSupportCustomerId&&supportMessages.some(m=>String(m.customer_id)===String(activeSupportCustomerId))){
+  const savedCustomerId=activeSupportCustomerId;
+  openSupportChat(savedCustomerId,true);
+ }
  if(!supportRefreshTimer) supportRefreshTimer=setInterval(()=>{if(current==="support_messages")refreshSupportMessages();},5000);
  refreshAdminBadges();
 }
@@ -1210,9 +1214,11 @@ async function refreshSupportMessages(force=false){
  }catch(e){console.error("Customer Service refresh:",e.message);}
  finally{supportRefreshing=false;refreshAdminBadges();}
 }
-function closeAdminSupportChat(){document.body.classList.remove("admin-chat-open");activeSupportCustomerId=null;supportPage();}
+function closeAdminSupportChat(){document.body.classList.remove("admin-chat-open");activeSupportCustomerId=null;try{sessionStorage.removeItem("smartSellerActiveSupportCustomer");}catch(e){}supportPage();}
 async function openSupportChat(customerId,preserveDraft=false){
+ const previousScrollTop=document.getElementById("supportChatMessages")?.scrollTop||0;
  document.body.classList.add("admin-chat-open");
+ try{sessionStorage.setItem("smartSellerActiveSupportCustomer",String(customerId));}catch(e){}
  const draft=document.getElementById("supportReply")?.value||"";
  activeSupportCustomerId=String(customerId);
  const messages=window.supportGroups?.[activeSupportCustomerId]||[];
@@ -1232,6 +1238,7 @@ async function openSupportChat(customerId,preserveDraft=false){
    return `<div class="${admin?"chat-message":"chat-reply"}">${m.message?`<p>${esc(m.message)}</p>`:""}${imageHtml}<small class="chat-time">${m.created_at?new Date(m.created_at).toLocaleString():""}</small></div>`;
   }));
   box.innerHTML=renderedMessages.join("")||"No messages.";
+ box.scrollTop=preserveDraft?previousScrollTop:box.scrollHeight;
  const unreadIds=messages.filter(m=>String(m.sender_role||m.sender||"").toLowerCase()==="customer"&&!m.read_at).map(m=>m.id).filter(Boolean);
  if(unreadIds.length){
   try{
