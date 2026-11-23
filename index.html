@@ -411,41 +411,39 @@ body:has(#dashboard:not(.hidden)) main{max-width:1040px;padding:22px 20px 94px}
 /* Customer panel background: light blue-grey */
 body:has(#dashboard:not(.hidden)):not(.chat-open){background:#EAF0F7!important;background-image:none!important}
 
-/* Customer panel cards: refined, clean premium finish */
+/* Match all customer-panel cards to the Wallet Balance navy gradient */
 #dashboard .card,
 #dashboard .stat,
 #dashboard .product-card,
 #dashboard .data-card,
 #dashboard .company-tile{
-  background:#fff!important;
-  border:1px solid #dce5f0!important;
-  border-radius:18px!important;
-  box-shadow:0 8px 24px rgba(24,48,78,.09),0 2px 5px rgba(24,48,78,.035)!important;
-}
-#dashboard .stat{
-  border-top:3px solid #c9d8e9!important;
-}
-#dashboard .stat:first-child{
-  background:linear-gradient(130deg,#10243d 0%,#1d3d60 72%,#294d70 100%)!important;
+  background:linear-gradient(125deg,#10243d 0%,#1d3d60 72%,#294d70 100%)!important;
+  color:#fff!important;
   border:1px solid #c9a85f!important;
-  border-top:3px solid #dfbd73!important;
-  box-shadow:0 12px 28px rgba(16,36,61,.20)!important;
+  border-radius:18px!important;
+  box-shadow:0 10px 25px rgba(16,36,61,.18)!important;
 }
-#dashboard .product-card,
-#dashboard .data-card{
-  overflow:hidden;
-}
-#dashboard .product-image{
-  border:1px solid #e5ebf3;
-  border-radius:12px!important;
-}
+#dashboard .stat{border-top:3px solid #dfbd73!important}
+#dashboard .stat:first-child{border-top:3px solid #dfbd73!important}
+#dashboard .card h2,
 #dashboard .card h3,
-#dashboard .data-card h3{
-  color:#183451;
+#dashboard .data-card h3,
+#dashboard .product-card h3,
+#dashboard .stat strong,
+#dashboard .stat .stat-label,
+#dashboard .company-tile strong{color:#fff!important}
+#dashboard .muted,
+#dashboard .small,
+#dashboard .page-title p{color:#d2dce8!important}
+#dashboard .product-card,
+#dashboard .data-card{overflow:hidden}
+#dashboard .product-image{
+  border:1px solid #c9a85f!important;
+  border-radius:12px!important;
 }
 #dashboard .my-products-count{
   border-radius:12px;
-  box-shadow:0 4px 12px rgba(24,48,78,.05);
+  box-shadow:0 4px 12px rgba(16,36,61,.12);
 }
 </style>
 </head>
