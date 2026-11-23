@@ -1098,7 +1098,7 @@ async function withdrawalsPage(version=pageVersion){
    return a;
   },{total:0,approved:0,rejected:0,pending:0});
   return `<div class="kyc-row">
-   <span class="kyc-customer" onclick="openWithdrawalCustomer('${esc(id)}')">${esc(customer.full_name||"Name not available")} — ${esc(customer.email||"Email not available")}</span>
+   <span class="kyc-customer" onclick="openWithdrawalCustomer('${esc(id)}')">${[customer.full_name,customer.email].filter(v=>String(v||"").trim()!=="").map(esc).join(" — ")||"Customer"}</span>
    <span>${counts.total} total</span>
    <span class="ok">${counts.approved} approved</span>
    <span class="error">${counts.rejected} rejected</span>
@@ -1138,7 +1138,7 @@ async function kycPage(version=pageVersion){
  const target=document.getElementById("kycList");if(!target)return;
  target.innerHTML=customerGroups.map(([customerId,requests])=>{
   const customer=customers.find(c=>String(c.id)===String(customerId));
-  const customerLabel=(customer?.full_name||"Name not available")+" — "+(customer?.email||"Email not available");
+  const customerLabel=[customer?.full_name,customer?.email].filter(v=>String(v||"").trim()!=="").map(esc).join(" — ")||"Customer";
   const latest=requests[0];
   const latestPending=String(latest.status||"").trim().toLowerCase()==="pending";
   const summaryActions=latestPending
