@@ -373,16 +373,7 @@ async function loadCustomers(){
  const adminIds=new Set((admins.data||[]).map(a=>String(a.user_id)));
  const {data:{user:adminUser}}=await db.auth.getUser();
  if(adminUser)adminIds.add(String(adminUser.id));
- const seenEmails=new Set(),seenNames=new Set(),unique=[];
- (r.data||[]).filter(c=>!adminIds.has(String(c.id))).forEach(c=>{
-  const email=String(c.email||"").trim().toLowerCase();
-  const name=String(c.full_name||"").trim().toLowerCase().replace(/\\s+/g," ");
-  if((email&&seenEmails.has(email))||(name&&name!=="name not available"&&seenNames.has(name)))return;
-  if(email)seenEmails.add(email);
-  if(name&&name!=="name not available")seenNames.add(name);
-  unique.push(c);
- });
- customers=unique;
+ customers=(r.data||[]).filter(c=>!adminIds.has(String(c.id)));
 }
 let totalProductCount=0;
 async function loadProducts(){
@@ -393,13 +384,15 @@ async function loadProducts(){
 }
 function customerName(id){
  const c=customers.find(x=>String(x.id)===String(id));
- return c?(c.full_name||c.email||id):id;
+ return c?(c.full_name||c.email||"Customer"):"Customer";
 }
 function customerEmail(id){
- return customers.find(x=>String(x.id)===String(id))?.email||"Email not available";
+ return customers.find(x=>String(x.id)===String(id))?.email||"";
 }
 function customerLink(id){
- return `<span class="click-customer" onclick="openCustomerProfile('${esc(id)}')">${esc(customerName(id))}<br>${esc(customerEmail(id))}</span>`;
+ const c=customers.find(x=>String(x.id)===String(id));
+ const details=[c?.full_name,c?.email].filter(v=>String(v||"").trim()!=="");
+ return `<span class="click-customer" onclick="openCustomerProfile('${esc(id)}')">${details.map(esc).join("<br>")||"Customer"}</span>`;
 }
 function renderSimple(data){
  if(!data?.length)return "No records found";
@@ -419,8 +412,14 @@ function renderCustomerLinkedTable(data){
 
 /* CUSTOMER PROFILE - OTHER ADMIN SECTIONS */
 function customerProfilePhoto(p){
- const url=String(p?.avatar||"").trim();
- return url?'<img class="admin-customer-avatar" src="'+esc(url)+'" alt="Customer profile picture" onerror="this.style.display=\'none\'">':"";
+ const url=String(p?.avatar||p?.avatar_url||"").trim();
+ return url?'<img class="admin-customer-avatar" src="'+esc(url)+'" alt="Customer profile picture" onerror="this.style.display=\\'none\\'">':"";
+}
+function customerProfileDetails(p){
+ const fields=[["FULL NAME",p?.full_name],["EMAIL",p?.email],["PHONE",p?.phone]]
+  .filter(([label,value])=>String(value??"").trim()!=="")
+  .map(([label,value])=>`<div class="profile-field"><b>${label}</b><p>${esc(value)}</p></div>`).join("");
+ return fields?`<div class="profile-grid">${fields}</div>`:"<p class='muted'>No customer-provided profile details.</p>";
 }
 async function openCustomerProfile(id){
  const modal=document.getElementById("customerProfileModal");
@@ -440,9 +439,7 @@ async function openCustomerProfile(id){
   const [pr,or,wr,kr,wallet,cp,credit,chat]=requests;
   if(pr.error)throw pr.error;
   const p=pr.data||{};
-  const fields=[["FULL NAME",p.full_name],["EMAIL",p.email],["PHONE",p.phone]]
-    .filter(([label,value])=>String(value??"").trim()!=="")
-    .map(([label,value])=>`<div class="profile-field"><b>${label}</b><p>${esc(value)}</p></div>`).join("");
+
   const history=(result,title)=>{
    if(result.error)return `<h3>${title}</h3><p class="error">History load error: ${esc(result.error.message)}</p>`;
    const rows=result.data||[];
@@ -458,8 +455,8 @@ async function openCustomerProfile(id){
    return `<h3>${title} (${rows.length})</h3>${renderSimple(rows)}`;
   };
   box.innerHTML=`
-   <div class="admin-customer-profile-head">${customerProfilePhoto(p)}<h2>${esc(p.full_name||"Customer")} — ${esc(p.email||"Email not provided")}</h2></div>
-   <div class="profile-grid">${fields||"Customer ne abhi koi profile detail provide nahi ki."}</div>
+   <div class="admin-customer-profile-head">${customerProfilePhoto(p)}<h2>${esc(p.full_name||"Customer")}${p.email?" — "+esc(p.email):""}</h2></div>
+   ${customerProfileDetails(p)}
    ${history(or,"Customer Orders")}
    ${history(wr,"Withdrawal Requests")}
    ${history(wallet,"Wallet / Balance History")}
@@ -523,11 +520,7 @@ async function openKycCustomer(id){
   }
   box.innerHTML=`
    <div class="admin-customer-profile-head">${customerProfilePhoto(p)}<h2>Customer KYC Details</h2></div>
-   <div class="profile-grid">
-    <div class="profile-field"><b>CUSTOMER NAME</b><p>${esc(p.full_name||"Name not available")}</p></div>
-    <div class="profile-field"><b>GMAIL</b><p>${esc(p.email||"Email not available")}</p></div>
-    <div class="profile-field"><b>PHONE</b><p>${esc(p.phone||"Phone not available")}</p></div>
-   </div>
+   ${customerProfileDetails(p)}
    <h3>KYC Documents (${records.length})</h3>${documents.join("")||"No KYC documents found."}`;
  }catch(e){box.innerHTML="<p class='error'>"+esc(e.message)+"</p>"}
 }
@@ -566,11 +559,7 @@ async function openWithdrawalCustomer(customerId){
   box.innerHTML=`
    <h2>Complete Withdrawal History</h2>
    <div class="admin-customer-profile-head">${customerProfilePhoto(p)}<h3>Customer Information</h3></div>
-   <div class="profile-grid">
-    <div class="profile-field"><b>NAME</b><p>${esc(p.full_name||"Name not available")}</p></div>
-    <div class="profile-field"><b>GMAIL</b><p>${esc(p.email||"Email not available")}</p></div>
-    <div class="profile-field"><b>PHONE</b><p>${esc(p.phone||"Phone not available")}</p></div>
-   </div>
+   ${customerProfileDetails(p)}
    <h3>Withdrawal Summary</h3>
    <div class="profile-grid">
     <div class="profile-field"><b>TOTAL WITHDRAWALS</b><p>${counts.total}</p></div>
