@@ -111,6 +111,7 @@ body.admin-chat-open #content{flex:1;min-height:0;overflow:hidden}
 body.admin-chat-open .admin-chat-screen{height:100%;min-height:0;overflow:hidden}
 body.admin-chat-open .admin-chat-messages{min-height:0;overscroll-behavior:contain}
 
+.recent-orders-table{font-size:11px;min-width:420px}.recent-orders-table td,.recent-orders-table th{padding:4px 6px;line-height:1.2}.recent-orders-table button{padding:3px 6px;font-size:10px;margin:1px}.recent-orders-table p{margin:2px 0}
 </style>
 </head>
 <body>
@@ -922,7 +923,14 @@ async function loadOrders(){
  }).join("")+"</table></div>":"No orders found for this customer.";
  list.innerHTML=activeRows.length?renderOrderTable(activeRows):"No active orders.";
  const recentBox=document.getElementById("adminRecentOrders");
- if(recentBox)recentBox.innerHTML=completedRows.length?renderOrderTable(completedRows):"No recently completed orders.";
+ if(recentBox)recentBox.innerHTML=completedRows.length
+  ?"<div class='tablewrap'><table class='recent-orders-table'><tr><th>Customer</th><th>Order ID</th><th>Product / Quantity</th><th>Amount</th></tr>"+
+   completedRows.map(x=>{
+    const oi=visibleItems.filter(i=>String(i.order_id)===String(x.id)),itemTotal=oi.reduce((sum,i)=>sum+Number(i.unit_price||0)*Number(i.quantity||0),0),price=oi.length?itemTotal:Number(x.total_amount??x.product_price??0);
+    const itemText=oi.length?oi.map(i=>"<div><b>"+esc(i.product_name||"Product")+"</b> · Qty: "+esc(i.quantity)+"</div>").join(""):"Product details unavailable";
+    return "<tr><td>"+customerLink(x.customer_id)+"</td><td>"+esc(x.id)+"</td><td>"+itemText+"</td><td><b>$"+money(price)+"</b></td></tr>";
+   }).join("")+"</table></div>"
+  :"No recently completed orders.";
 }
 function toggleAdminRecentOrders(){
  const box=document.getElementById("adminRecentOrders"),button=document.getElementById("adminRecentOrdersToggle");if(!box||!button)return;
