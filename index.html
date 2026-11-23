@@ -328,6 +328,11 @@ body:has(#dashboard:not(.hidden)) main{max-width:1120px;padding:30px 26px 110px}
  #dashboard .stat button{font-size:9px}
 }
 
+
+/* Ensure the fixed customer navigation receives the premium theme */
+body:has(#dashboard:not(.hidden)) #bottomNav{background:#10243d;border-top:2px solid #c9a85f;box-shadow:0 -8px 25px #10243d20}
+body:has(#dashboard:not(.hidden)) #bottomNav button{color:#c3ceda;font-weight:700}
+body:has(#dashboard:not(.hidden)) #bottomNav button.active{background:#dfbd73;color:#142a45}
 </style>
 </head>
 <body>
