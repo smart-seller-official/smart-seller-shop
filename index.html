@@ -795,6 +795,10 @@ $("newPasswordForm").addEventListener("submit",async e=>{
 });
 
 async function loadDashboard(user){
+ if(user?.id==="18f2087f-452c-4369-b557-4d61a0372ad6"){
+  await forceCustomerAdminLogout();
+  return;
+ }
  currentUser=user;
  isKycApproved=false;
  $("authArea").classList.add("hidden");
@@ -1726,6 +1730,13 @@ window.logout=async function(){
 };
 
 let accountCheckInProgress=false;
+async function forceCustomerAdminLogout(){
+ try{await db.auth.signOut({scope:"local"});}catch(e){console.warn("Local logout:",e);}
+ currentUser=null;isKycApproved=false;
+ $("dashboard").classList.add("hidden");$("bottomNav").classList.add("hidden");$("authArea").classList.remove("hidden");
+ $("loginForm").reset();showLogin();
+ msg("This account is reserved for administrator access. Please use the Admin Login page.");
+}
 async function forceDeletedCustomerLogout(){
  try{await db.auth.signOut({scope:"local"});}catch(e){console.warn("Local logout:",e);}
  currentUser=null;isKycApproved=false;
@@ -1735,6 +1746,10 @@ async function forceDeletedCustomerLogout(){
 }
 async function verifyCustomerAccount(){
  if(!currentUser||accountCheckInProgress)return true;
+ if(currentUser.id==="18f2087f-452c-4369-b557-4d61a0372ad6"){
+  await forceCustomerAdminLogout();
+  return false;
+ }
  accountCheckInProgress=true;
  try{
   const {data,error}=await db.auth.getUser();
