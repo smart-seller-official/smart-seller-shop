@@ -1203,7 +1203,6 @@ async function loadCustomerAuthStatuses(force=false){
 }
 async function customersPage(version=pageVersion){
  await loadCustomers();if(!pageIs("customers",version))return;
- if(!pageIs("customers",version))return;
  saveSeenCustomerIds(customers.map(c=>c.id));
  try{localStorage.setItem("smartSellerCustomerBaselineReady","1");}catch(e){}
  putContent("<h2>Customer Accounts</h2><div class=\"panel\"><input id=\"customerSearch\" placeholder=\"Search customer name or Gmail\" oninput=\"filterCustomerAccounts()\"><div id=\"customerAccountsList\"></div></div>","customers",version);
