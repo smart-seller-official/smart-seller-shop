@@ -115,6 +115,18 @@ body.admin-chat-open .admin-chat-messages{min-height:0;overscroll-behavior:conta
 
 #adminRecentOrders{max-height:55vh;overflow-y:auto;overscroll-behavior:contain;}
 .recent-orders-table{font-size:11px;min-width:420px}.recent-orders-table td,.recent-orders-table th{padding:4px 6px;line-height:1.2}.recent-orders-table button{padding:3px 6px;font-size:10px;margin:1px}.recent-orders-table p{margin:2px 0}
+
+/* Customer Service chat: keep composer inside the visible viewport below the 60px header */
+body.admin-chat-open{position:fixed;inset:0;width:100%;height:100dvh;overflow:hidden}
+body.admin-chat-open #layout{height:calc(100dvh - 60px)!important;min-height:0!important;overflow:hidden}
+body.admin-chat-open main{height:100%!important;min-height:0!important;overflow:hidden;display:flex;flex-direction:column}
+body.admin-chat-open #content{display:flex;flex:1 1 auto;min-height:0;height:100%;overflow:hidden}
+body.admin-chat-open .admin-chat-screen{display:flex;flex:1 1 auto;height:100%!important;min-height:0;overflow:hidden}
+body.admin-chat-open .chat-scroll{flex:1 1 auto;min-height:0;overflow-y:auto}
+body.admin-chat-open .chat-composer{display:flex!important;flex:0 0 auto!important;position:relative;z-index:20;visibility:visible!important}
+body.admin-chat-open .chat-composer textarea{display:block!important;visibility:visible!important;min-width:0;flex:1 1 auto}
+body.admin-chat-open .chat-composer button{display:inline-flex!important;visibility:visible!important;opacity:1!important}
+
 </style>
 </head>
 <body>
