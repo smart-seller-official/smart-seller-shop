@@ -1208,8 +1208,12 @@ async function openSupportChat(customerId,preserveDraft=false){
  putContent(`<section class="admin-chat-screen">
   <div class="admin-chat-topbar"><button type="button" class="admin-chat-back" onclick="closeAdminSupportChat()">‹</button><div><strong>${esc(supportCustomerName(customerId))}</strong><small>${esc(supportCustomerEmail(customerId))}</small></div><span class="admin-chat-online"></span></div>
   <div id="supportChatMessages" class="admin-chat-messages"></div>
-  <div class="admin-chat-compose"><textarea id="supportReply" placeholder="Type a message..." rows="1">${preserveDraft?esc(draft):""}</textarea><input id="adminSupportImage" type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden><button type="button" class="gray" onclick="document.getElementById('adminSupportImage').click()" aria-label="Attach image">📎</button><button type="button" class="green" id="sendSupportReply" onclick="sendReply()" aria-label="Send message">Send Reply</button></div>
+  <div class="admin-chat-compose"><textarea id="supportReply" placeholder="Type a message..." rows="1">${preserveDraft?esc(draft):""}</textarea><input id="adminSupportImage" type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden><button type="button" class="gray" onclick="document.getElementById('adminSupportImage').click()" aria-label="Attach image">📎</button><button type="button" class="green" id="sendSupportReply" aria-label="Send message">Send Reply</button></div>
  </section>`,"support_messages",pageVersion);
+ const sendButton=document.getElementById("sendSupportReply");
+ if(sendButton)sendButton.addEventListener("click",sendReply);
+ const replyInput=document.getElementById("supportReply");
+ if(replyInput)replyInput.addEventListener("keydown",event=>{if(event.key==="Enter"&&!event.shiftKey){event.preventDefault();sendReply();}});
  const box=document.getElementById("supportChatMessages");
  if(!box)return;
  const renderedMessages=await Promise.all(messages.map(async m=>{
