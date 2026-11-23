@@ -722,10 +722,9 @@ async function ordersPage(version=pageVersion){
  <option value="">Select Customer</option>
  ${customers.map(c=>`<option value="${esc(c.id)}">${esc(c.full_name||c.email||c.id)} — ${esc(c.email||"")}</option>`).join("")}
  </select>
- <div id="orderDraftRows"></div>
- <button type="button" class="gray" onclick="addOrderDraftRow()">+ Add Another Order</button>
- <p class="muted">Aik customer select karke ek sath multiple products ke orders bhej sakte hain. Har product ka order alag create hoga.</p>
- <button class="green" id="sendOrderButton" onclick="sendOrder()">SEND ALL ORDERS</button>
+ <div id="orderDraftRows"><p class="muted">Pehle customer select karein. Uske tamam available products yahan list mein aa jayenge.</p></div>
+ <p class="muted">Products ke saamne checkbox mark karein. Har selected product ki quantity aur admin profit yahin set karein.</p>
+ <button class="green" id="sendOrderButton" onclick="sendOrder()">SEND SELECTED ORDERS</button>
  </div>
  <div class="cards">
  <div class="stat">Pending Orders Total<strong id="pendingOrdersTotal">$0.00</strong><span class="muted">Selected customer ke pending orders ki Product Price</span></div>
@@ -740,66 +739,59 @@ async function ordersPage(version=pageVersion){
  <button class="gray" onclick="loadOrders()">Refresh</button><div id="orderList"></div><button type="button" class="gray" id="adminRecentOrdersToggle" style="width:100%;margin-top:12px" onclick="toggleAdminRecentOrders()">Recently Orders ▾</button><div id="adminRecentOrders" style="display:none;margin-top:10px"></div></div>`,"orders",version);
  const customerSelect=document.getElementById("ocustomer"),filterSelect=document.getElementById("orderCustomerFilter");
  if(customerSelect)customerSelect.value=orderCustomerFilterId;if(filterSelect)filterSelect.value=orderCustomerFilterId;
- addOrderDraftRow();await loadOrders();
+ renderOrderProductOptions();await loadOrders();
 }
-let orderDraftRowCount=0;
 function syncOrderCustomerFilter(id){
- orderCustomerFilterId=String(id||"");const filter=document.getElementById("orderCustomerFilter");if(filter)filter.value=orderCustomerFilterId;loadOrders();
-}
-function orderDraftOptions(){
- const customerId=val("ocustomer"),rows=customerProductRows.filter(x=>!customerId||String(x.customer_id)===customerId);
- return '<option value="">Select customer product</option>'+rows.map(x=>`<option value="${esc(x.id)}">${esc(x.product_name||"Product")} — ${money(x.price)}</option>`).join("");
+ orderCustomerFilterId=String(id||"");const filter=document.getElementById("orderCustomerFilter");if(filter)filter.value=orderCustomerFilterId;loadOrders();renderOrderProductOptions();
 }
 function renderOrderProductOptions(){
- document.querySelectorAll(".order-draft-product").forEach(select=>{
-  const previous=select.value;select.innerHTML=orderDraftOptions();
-  if([...select.options].some(o=>o.value===previous))select.value=previous;
- });
- document.querySelectorAll(".order-draft-row").forEach(row=>calcBatchOrder(row.querySelector(".order-draft-product")));
-}
-function addOrderDraftRow(){
  const box=document.getElementById("orderDraftRows");if(!box)return;
- const id=++orderDraftRowCount,div=document.createElement("div");
- div.className="panel order-draft-row";div.dataset.rowId=String(id);
- div.innerHTML=`<h3>Order ${id}</h3>
- <label>Customer Added Product</label><select class="order-draft-product" onchange="calcBatchOrder(this)">${orderDraftOptions()}</select>
- <label>Quantity</label><input class="order-draft-qty" type="number" min="1" step="1" value="1" oninput="calcBatchOrder(this)">
- <label>Admin Profit (20% automatic - manually editable)</label><input class="order-draft-profit" type="number" min="0" step="0.01" value="0" data-auto="1" oninput="this.dataset.auto='0';calcBatchOrder(this)">
- <div class="order-calculation"><p>Product Price <strong class="draft-price">$0.00</strong></p><p>Profit <strong class="draft-profit">$0.00</strong></p><p>Expected Return <strong class="draft-return">$0.00</strong></p></div>
- <button type="button" class="gray" onclick="removeOrderDraftRow(this)">Remove Order</button>`;
- box.appendChild(div);calcBatchOrder(div.querySelector(".order-draft-product"));
+ const cid=val("ocustomer");
+ if(!cid){box.innerHTML='<p class="muted">Pehle customer select karein. Uske available products yahan show honge.</p>';return}
+ const rows=customerProductRows.filter(x=>String(x.customer_id)===cid);
+ if(!rows.length){box.innerHTML='<p class="muted">Is customer ka koi available product nahi hai.</p>';return}
+ box.innerHTML=rows.map(p=>`<div class="panel batch-product-row" data-product-id="${esc(p.id)}" style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:start;margin:8px 0">
+  <label style="display:flex;align-items:center;gap:7px;margin:4px 0"><input class="batch-product-check" type="checkbox" onchange="toggleSelectedProduct(this)"> Select</label>
+  <div><strong>${esc(p.product_name||"Product")}</strong><div class="muted">Product Price: $${money(p.price)}</div>
+   <div class="batch-product-fields" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-top:8px;opacity:.55">
+    <label>Quantity<input class="batch-product-qty" type="number" min="1" step="1" value="1" disabled oninput="calcSelectedProduct(this)"></label>
+    <label>Admin Profit (20% automatic)<input class="batch-product-profit" type="number" min="0" step="0.01" value="0" data-auto="1" disabled oninput="this.dataset.auto='0';calcSelectedProduct(this)"></label>
+   </div>
+   <div class="muted batch-product-calculation">Product Price: $0.00 · Profit: $0.00 · Expected Return: $0.00</div>
+  </div>
+ </div>`).join("");
 }
-function removeOrderDraftRow(button){
- const rows=document.querySelectorAll(".order-draft-row");if(rows.length<=1)return note("Kam az kam aik order row rehna zaroori hai.",true);
- button.closest(".order-draft-row")?.remove();
+function toggleSelectedProduct(check){
+ const row=check.closest(".batch-product-row");if(!row)return;
+ const fields=row.querySelector(".batch-product-fields"),qty=row.querySelector(".batch-product-qty"),profit=row.querySelector(".batch-product-profit");
+ [qty,profit].forEach(x=>{if(x)x.disabled=!check.checked});
+ if(fields)fields.style.opacity=check.checked?"1":".55";
+ if(check.checked){if(profit)profit.dataset.auto="1";calcSelectedProduct(check)}
+ else{const calc=row.querySelector(".batch-product-calculation");if(calc)calc.textContent="Product Price: $0.00 · Profit: $0.00 · Expected Return: $0.00"}
 }
-function calcBatchOrder(control){
- const row=control?.classList?.contains("order-draft-row")?control:control?.closest?.(".order-draft-row");
- if(!row)return;
- const product=customerProductRows.find(x=>String(x.id)===row.querySelector(".order-draft-product")?.value);
- const qty=Number(row.querySelector(".order-draft-qty")?.value),validQty=Number.isInteger(qty)&&qty>0?qty:0;
- const price=Number(product?.price||0)*validQty,profitInput=row.querySelector(".order-draft-profit");
- if(profitInput?.dataset.auto!=="0")profitInput.value=money(price*.20);
- const profit=Number(profitInput?.value||0);
- row.querySelector(".draft-price").textContent="$"+money(price);
- row.querySelector(".draft-profit").textContent="$"+money(profit);
- row.querySelector(".draft-return").textContent="$"+money(price+profit);
+function calcSelectedProduct(control){
+ const row=control?.closest?.(".batch-product-row");if(!row)return;
+ const p=customerProductRows.find(x=>String(x.id)===String(row.dataset.productId));
+ const qty=Number(row.querySelector(".batch-product-qty")?.value),valid=Number.isInteger(qty)&&qty>0?qty:0;
+ const total=Number(p?.price||0)*valid,profitInput=row.querySelector(".batch-product-profit");
+ if(profitInput?.dataset.auto!=="0")profitInput.value=money(total*.20);
+ const profit=Number(profitInput?.value||0),calc=row.querySelector(".batch-product-calculation");
+ if(calc)calc.textContent="Product Price: $"+money(total)+" · Profit: $"+money(profit)+" · Expected Return: $"+money(total+profit);
 }
 function applyOrderCustomerFilter(id){
  orderCustomerFilterId=String(id||"");const customer=document.getElementById("ocustomer");if(customer)customer.value=orderCustomerFilterId;
  const filter=document.getElementById("orderCustomerFilter");if(filter)filter.value=orderCustomerFilterId;renderOrderProductOptions();loadOrders();
 }
 async function sendOrder(){
- const cid=val("ocustomer"),rows=[...document.querySelectorAll(".order-draft-row")];
+ const cid=val("ocustomer"),rows=[...document.querySelectorAll(".batch-product-row")].filter(row=>row.querySelector(".batch-product-check")?.checked);
  if(!cid)return note("Pehle customer select karein.",true);
- if(!rows.length)return note("Kam az kam aik order add karein.",true);
- const batch=[],used=new Set();
+ if(!rows.length)return note("Kam az kam aik product checkbox se select karein.",true);
+ const batch=[];
  for(const row of rows){
-  const pid=row.querySelector(".order-draft-product")?.value,qty=Number(row.querySelector(".order-draft-qty")?.value),p=customerProductRows.find(x=>String(x.id)===pid),profit=Number(row.querySelector(".order-draft-profit")?.value);
-  if(!p||String(p.customer_id)!==cid||!Number.isInteger(qty)||qty<1)return note("Har order ke liye isi customer ka product aur valid quantity select karein.",true);
-  if(used.has(String(p.id)))return note("Aik hi customer product ko batch mein dobara select na karein.",true);
+  const p=customerProductRows.find(x=>String(x.id)===String(row.dataset.productId)),qty=Number(row.querySelector(".batch-product-qty")?.value),profit=Number(row.querySelector(".batch-product-profit")?.value);
+  if(!p||String(p.customer_id)!==cid||!Number.isInteger(qty)||qty<1)return note("Selected products ki quantity check karein.",true);
   if(!Number.isFinite(Number(p.price))||Number(p.price)<0||!Number.isFinite(profit)||profit<0)return note("Product price ya profit amount check karein.",true);
-  used.add(String(p.id));batch.push({p,qty,unitPrice:Number(p.price),total:Number(p.price)*qty,profit});
+  batch.push({p,qty,unitPrice:Number(p.price),total:Number(p.price)*qty,profit});
  }
  const b=document.getElementById("sendOrderButton");if(!b)return;b.disabled=true;
  const claimed=[],created=[];
@@ -820,8 +812,7 @@ async function sendOrder(){
   customerProductRows=customerProductRows.filter(x=>!sentIds.has(String(x.id)));
   orderCustomerFilterId=String(cid);const filter=document.getElementById("orderCustomerFilter");if(filter)filter.value=orderCustomerFilterId;
   note(batch.length+" orders successfully sent. Selected products are removed from the available list.");
-  const draftBox=document.getElementById("orderDraftRows");if(draftBox)draftBox.innerHTML="";
-  addOrderDraftRow();renderOrderProductOptions();
+  renderOrderProductOptions();
   if(current==="orders")await loadOrders();
  }catch(e){
   for(const id of created.reverse())await db.from("orders").delete().eq("id",id);
