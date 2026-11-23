@@ -306,8 +306,17 @@ async function refreshAdminBadges(){
   const customerRows=results[4].data||[];
   const customerCount=customerRows.length;
   const seenCustomerIds=readSeenCustomerIds();
-  const newCustomerCount=current==="customers"?0:customerRows.filter(c=>!seenCustomerIds.has(String(c.id))).length;
-  if(current==="customers")saveSeenCustomerIds(customerRows.map(c=>c.id));
+  let customerBaselineReady=false;
+  try{customerBaselineReady=localStorage.getItem("smartSellerCustomerBaselineReady")==="1";}catch(e){}
+  if(!customerBaselineReady){
+   saveSeenCustomerIds(customerRows.map(c=>c.id));
+   try{localStorage.setItem("smartSellerCustomerBaselineReady","1");}catch(e){}
+  }
+  const newCustomerCount=current==="customers"?0:(customerBaselineReady?customerRows.filter(c=>!seenCustomerIds.has(String(c.id))).length:0);
+  if(current==="customers"){
+   saveSeenCustomerIds(customerRows.map(c=>c.id));
+   try{localStorage.setItem("smartSellerCustomerBaselineReady","1");}catch(e){}
+  }
   const ob=document.getElementById("adminOrdersBadge"),mb=document.getElementById("adminMessagesBadge"),kb=document.getElementById("adminKycBadge"),wb=document.getElementById("adminWithdrawalsBadge"),cb=document.getElementById("adminCustomersBadge"),nb=document.getElementById("adminNotificationsBadge");
   if(ob)ob.textContent=pending?String(pending):"";
   if(mb){mb.textContent=waiting?String(waiting):"";mb.style.display=waiting?"inline-block":"none";}
@@ -1166,6 +1175,7 @@ function saveSeenCustomerIds(ids){
 async function customersPage(version=pageVersion){
  await loadCustomers();if(!pageIs("customers",version))return;
  saveSeenCustomerIds(customers.map(c=>c.id));
+ try{localStorage.setItem("smartSellerCustomerBaselineReady","1");}catch(e){}
  putContent(`<h2>Customer Accounts</h2>
  <div class="panel"><input id="customerSearch" placeholder="Search customer name or Gmail" oninput="filterCustomerAccounts()"><div id="customerAccountsList"></div></div>`,"customers",version);
  renderCustomerAccounts(customers);
