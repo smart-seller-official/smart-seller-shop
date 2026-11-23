@@ -214,6 +214,11 @@ button,input,select,textarea{font-size:14px}
  #dashboard button{border-radius:10px}
 }
 
+/* Customer dashboard desktop background only */
+@media(min-width:601px){
+ body:has(#dashboard:not(.hidden)){background:#f3f6fa;background-image:radial-gradient(ellipse at 90% 0%,#e8eef7 0,transparent 42%);background-attachment:fixed}
+ #dashboard .card,#dashboard .stat,#dashboard .product-card,#dashboard .data-card{background:#fff;border:1px solid #e5ebf3;border-radius:16px;box-shadow:0 6px 20px #1e3a5f0c}
+}
 .logo{display:flex;align-items:center;gap:9px}.brand-mark{width:32px;height:32px;object-fit:contain;flex:0 0 32px;filter:drop-shadow(0 2px 5px #d9ad4870)}
 .logo{font-family:Georgia,'Times New Roman',serif!important;font-size:25px!important;font-weight:900!important;letter-spacing:1.5px!important;background:linear-gradient(90deg,#ffd166 0%,#ff7b54 24%,#f15bb5 48%,#7b9cff 72%,#55e6c1 100%);-webkit-background-clip:text;background-clip:text;color:transparent!important;-webkit-text-stroke:.35px #fff;text-shadow:0 2px 12px #f5b94255;position:relative;line-height:1.15;padding-bottom:5px}
 
