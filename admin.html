@@ -812,6 +812,8 @@ async function ordersPage(version=pageVersion){
  const customerProductsResult=await db.from("customer_products").select("id,customer_id,product_id,product_name,price,category,image_url,created_at,ordered_at").order("created_at",{ascending:false}).limit(2000);
  if(customerProductsResult.error)throw customerProductsResult.error;
  customerProductRows=(customerProductsResult.data||[]).filter(x=>!x.ordered_at&&products.some(p=>String(p.id)===String(x.product_id)));
+ const customerIdsWithProducts=new Set(customerProductRows.map(x=>String(x.customer_id||"")).filter(Boolean));
+ const customersWithProducts=customers.filter(c=>customerIdsWithProducts.has(String(c.id)));
  if(!pageIs("orders",version))return;profitEdited=false;orderDraftRowCount=0;
  putContent(`
  <h2>Orders</h2>
@@ -819,7 +821,7 @@ async function ordersPage(version=pageVersion){
  <label>Customer</label>
  <select id="ocustomer" onchange="syncOrderCustomerFilter(this.value);renderOrderProductOptions()">
  <option value="">Select Customer</option>
- ${customers.map(c=>`<option value="${esc(c.id)}">${esc(c.full_name||c.email||c.id)} — ${esc(c.email||"")}</option>`).join("")}
+ ${customersWithProducts.map(c=>`<option value="${esc(c.id)}">${esc(c.full_name||c.email||c.id)} — ${esc(c.email||"")}</option>`).join("")}
  </select>
  <div class="orders-send-bar" style="position:sticky;top:8px;z-index:30;background:var(--panel,#fff);padding:10px;border-radius:10px;border:1px solid var(--border,#d8dee8);margin-bottom:10px">
   <button class="green" id="sendOrderButton" style="width:100%;margin:0" onclick="sendOrder()">SEND SELECTED ORDERS</button>
