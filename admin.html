@@ -1216,7 +1216,9 @@ async function refreshSupportMessages(force=false){
 }
 function closeAdminSupportChat(){document.body.classList.remove("admin-chat-open");activeSupportCustomerId=null;try{sessionStorage.removeItem("smartSellerActiveSupportCustomer");}catch(e){}supportPage();}
 async function openSupportChat(customerId,preserveDraft=false){
- const previousScrollTop=document.getElementById("supportChatMessages")?.scrollTop||0;
+ const previousBox=document.getElementById("supportChatMessages");
+ const previousScrollTop=previousBox?.scrollTop||0;
+ const wasAtBottom=previousBox?previousBox.scrollHeight-previousBox.scrollTop-previousBox.clientHeight<100:true;
  document.body.classList.add("admin-chat-open");
  try{sessionStorage.setItem("smartSellerActiveSupportCustomer",String(customerId));}catch(e){}
  const draft=document.getElementById("supportReply")?.value||"";
@@ -1238,7 +1240,13 @@ async function openSupportChat(customerId,preserveDraft=false){
    return `<div class="${admin?"chat-message":"chat-reply"}">${m.message?`<p>${esc(m.message)}</p>`:""}${imageHtml}<small class="chat-time">${m.created_at?new Date(m.created_at).toLocaleString():""}</small></div>`;
   }));
   box.innerHTML=renderedMessages.join("")||"No messages.";
- box.scrollTop=preserveDraft?previousScrollTop:box.scrollHeight;
+ const restoreChatScroll=()=>{
+  if(!box.isConnected)return;
+  box.scrollTop=preserveDraft?(wasAtBottom?box.scrollHeight:previousScrollTop):box.scrollHeight;
+ };
+ restoreChatScroll();
+ const chatImages=[...box.querySelectorAll("img")];
+ if(chatImages.length)Promise.all(chatImages.map(img=>img.decode?img.decode().catch(()=>{}):Promise.resolve())).then(restoreChatScroll);
  const unreadIds=messages.filter(m=>String(m.sender_role||m.sender||"").toLowerCase()==="customer"&&!m.read_at).map(m=>m.id).filter(Boolean);
  if(unreadIds.length){
   try{
