@@ -440,10 +440,9 @@ async function openCustomerProfile(id){
   const [pr,or,wr,kr,wallet,cp,credit,chat]=requests;
   if(pr.error)throw pr.error;
   const p=pr.data||{};
-  const fields=Object.entries(p).map(([key,value])=>`
-   <div class="profile-field"><b>${esc(key.replaceAll("_"," ").toUpperCase())}</b>
-   <p>${esc(value===null?"":typeof value==="object"?JSON.stringify(value):value)}</p></div>
-  `).join("");
+  const fields=[["FULL NAME",p.full_name],["EMAIL",p.email],["PHONE",p.phone]]
+    .filter(([label,value])=>String(value??"").trim()!=="")
+    .map(([label,value])=>`<div class="profile-field"><b>${label}</b><p>${esc(value)}</p></div>`).join("");
   const history=(result,title)=>{
    if(result.error)return `<h3>${title}</h3><p class="error">History load error: ${esc(result.error.message)}</p>`;
    const rows=result.data||[];
@@ -459,8 +458,8 @@ async function openCustomerProfile(id){
    return `<h3>${title} (${rows.length})</h3>${renderSimple(rows)}`;
   };
   box.innerHTML=`
-   <div class="admin-customer-profile-head">${customerProfilePhoto(p)}<h2>${esc(p.full_name||p.email||"Customer")} — ${esc(p.email||"Email not available")}</h2></div>
-   <div class="profile-grid">${fields||"No profile details found."}</div>
+   <div class="admin-customer-profile-head">${customerProfilePhoto(p)}<h2>${esc(p.full_name||"Customer")} — ${esc(p.email||"Email not provided")}</h2></div>
+   <div class="profile-grid">${fields||"Customer ne abhi koi profile detail provide nahi ki."}</div>
    ${history(or,"Customer Orders")}
    ${history(wr,"Withdrawal Requests")}
    ${history(wallet,"Wallet / Balance History")}
