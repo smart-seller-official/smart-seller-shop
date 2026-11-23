@@ -1255,9 +1255,12 @@ function makeOrderCard(o){
  status.textContent="Current Status: "+orderStatus(o);
  const detailLine=document.createElement("div");detailLine.className="order-detail-line";
  detailLine.append(status);
- const progress=document.createElement("div");progress.className="order-progress";
- orderProgress(s).forEach(step=>progress.appendChild(step));
- card.append(head,detailLine,progress);
+ card.append(head,detailLine);
+ if(s!=="pending"&&s!=="pickup"){
+  const progress=document.createElement("div");progress.className="order-progress";
+  orderProgress(s).forEach(step=>progress.appendChild(step));
+  card.appendChild(progress);
+ }
  if(s==="pending"||s==="pickup"){
   const button=document.createElement("button");
   button.className="full green-btn kyc-action";button.textContent="PICKUP";
