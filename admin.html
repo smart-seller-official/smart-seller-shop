@@ -1167,7 +1167,7 @@ function renderSupportCustomers(){
  const ids=[...new Set([...Object.keys(groups),...supportApprovedCustomerIds])].filter(id=>{
   const msgs=groups[id]||[];
   const unread=msgs.filter(m=>String(m.sender_role||m.sender||"").toLowerCase()==="customer"&&!m.read_at).length;
-  return (unread>0||supportApprovedCustomerIds.has(String(id)))&&(String(supportCustomerName(id))+" "+supportCustomerEmail(id)).toLowerCase().includes(q);
+  return (String(supportCustomerName(id))+" "+supportCustomerEmail(id)).toLowerCase().includes(q);
  });
  box.innerHTML=ids.map(id=>{
   const msgs=groups[id]||[];
