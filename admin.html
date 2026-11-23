@@ -58,6 +58,7 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere}
 .profile-modal{position:fixed;inset:0;background:#0009;z-index:9999;display:none;overflow:auto;padding:15px}
 .profile-modal-box{background:white;max-width:900px;margin:25px auto;padding:20px;border-radius:12px}
 .profile-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.admin-customer-profile-head{display:flex;align-items:center;gap:14px;margin:12px 0 18px}.admin-customer-avatar{width:86px;height:86px;flex:0 0 86px;object-fit:cover;border-radius:50%;border:2px solid #e1e6ef;background:#f3f5fa}
 .profile-field{background:#f3f5fa;padding:12px;border-radius:8px;overflow-wrap:anywhere}
 .kyc-image{display:block;width:100%;max-width:420px;max-height:420px;object-fit:contain;border-radius:10px;border:1px solid #ddd;margin:12px 0}
 .chat-bubble{padding:12px;border-radius:10px;margin:9px 0;max-width:85%;overflow-wrap:anywhere}
@@ -329,6 +330,10 @@ function renderCustomerLinkedTable(data){
 }
 
 /* CUSTOMER PROFILE - OTHER ADMIN SECTIONS */
+function customerProfilePhoto(p){
+ const url=String(p?.avatar||"").trim();
+ return url?'<img class="admin-customer-avatar" src="'+esc(url)+'" alt="Customer profile picture" onerror="this.style.display=\'none\'">':"";
+}
 async function openCustomerProfile(id){
  const modal=document.getElementById("customerProfileModal");
  const box=document.getElementById("customerProfileContent");
@@ -366,7 +371,7 @@ async function openCustomerProfile(id){
    return `<h3>${title} (${rows.length})</h3>${renderSimple(rows)}`;
   };
   box.innerHTML=`
-   <h2>${esc(p.full_name||p.email||"Customer")} — ${esc(p.email||"Email not available")}</h2>
+   <div class="admin-customer-profile-head">${customerProfilePhoto(p)}<h2>${esc(p.full_name||p.email||"Customer")} — ${esc(p.email||"Email not available")}</h2></div>
    <div class="profile-grid">${fields||"No profile details found."}</div>
    ${history(or,"Customer Orders")}
    ${history(wr,"Withdrawal Requests")}
@@ -430,7 +435,7 @@ async function openKycCustomer(id){
     </div>`);
   }
   box.innerHTML=`
-   <h2>Customer KYC Details</h2>
+   <div class="admin-customer-profile-head">${customerProfilePhoto(p)}<h2>Customer KYC Details</h2></div>
    <div class="profile-grid">
     <div class="profile-field"><b>CUSTOMER NAME</b><p>${esc(p.full_name||"Name not available")}</p></div>
     <div class="profile-field"><b>GMAIL</b><p>${esc(p.email||"Email not available")}</p></div>
@@ -472,7 +477,7 @@ async function openWithdrawalCustomer(customerId){
   }).join("");
   box.innerHTML=`
    <h2>Complete Withdrawal History</h2>
-   <h3>Customer Information</h3>
+   <div class="admin-customer-profile-head">${customerProfilePhoto(p)}<h3>Customer Information</h3></div>
    <div class="profile-grid">
     <div class="profile-field"><b>NAME</b><p>${esc(p.full_name||"Name not available")}</p></div>
     <div class="profile-field"><b>GMAIL</b><p>${esc(p.email||"Email not available")}</p></div>
