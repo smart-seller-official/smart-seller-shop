@@ -1196,11 +1196,7 @@ async function loadCustomerAuthStatuses(force=false){
   const {data,error}=await db.functions.invoke("admin-list-customers");
   if(error)throw error;
   if(!data?.success||!Array.isArray(data.customers))throw new Error(data?.error||"Email verification data unavailable.");
-  customerAuthStatusById=new Map(data.customers.map(c=>[String(c.id),{
-   email:c.email||null,
-   email_verified:c.email_verified===true,
-   email_verified_at:c.email_verified_at||null
-  }]));
+  customerAuthStatusById=new Map(data.customers.map(c=>[String(c.id),{email:c.email||null,email_verified:c.email_verified===true,email_verified_at:c.email_verified_at||null}]));
   customerAuthStatusLoadedAt=Date.now();
  }
  customers=customers.map(c=>({...c,...(customerAuthStatusById.get(String(c.id))||{})}));
@@ -1211,20 +1207,12 @@ async function customersPage(version=pageVersion){
  if(!pageIs("customers",version))return;
  saveSeenCustomerIds(customers.map(c=>c.id));
  try{localStorage.setItem("smartSellerCustomerBaselineReady","1");}catch(e){}
- putContent(\`<h2>Customer Accounts</h2>
- <div class="panel"><input id="customerSearch" placeholder="Search customer name or Gmail" oninput="filterCustomerAccounts()"><div id="customerAccountsList"></div></div>\`,"customers",version);
+ putContent("<h2>Customer Accounts</h2><div class=\"panel\"><input id=\"customerSearch\" placeholder=\"Search customer name or Gmail\" oninput=\"filterCustomerAccounts()\"><div id=\"customerAccountsList\"></div></div>","customers",version);
  renderCustomerAccounts(customers);
 }
 function renderCustomerAccounts(rows){
  const box=document.getElementById("customerAccountsList");if(!box)return;
- box.innerHTML=rows.map(c=>\`
-  <div class="kyc-row">
-   <span class="kyc-customer" onclick="openCustomerProfile('\${esc(c.id)}')">\${esc(c.full_name||"Name not available")} — \${esc(c.email||"Email not available")}</span>
-   <span class="\${c.email_verified===true?"ok":"error"}" style="font-size:11px;font-weight:700;white-space:nowrap">\${c.email_verified===true?"✓ Email Verified":c.email_verified===false?"✕ Email Not Verified":"Email Status Unavailable"}</span>
-   <span class="muted">\${esc(c.phone||"Phone not available")}</span>
-   <button class="gray" onclick="openCustomerProfile('\${esc(c.id)}')">Details</button>
-   <button class="red" onclick="deleteCustomerAccount('\${esc(c.id)}')">Delete</button>
-  </div>\`).join("")||"No customers found.";
+ box.innerHTML=rows.map(c=>"<div class=\"kyc-row\"><span class=\"kyc-customer\" onclick=\"openCustomerProfile(\u0027"+esc(c.id)+"\u0027)\">"+esc(c.full_name||"Name not available")+" — "+esc(c.email||"Email not available")+"</span><span class=\""+(c.email_verified===true?"ok":"error")+"\" style=\"font-size:11px;font-weight:700;white-space:nowrap\">"+(c.email_verified===true?"✓ Email Verified":c.email_verified===false?"✕ Email Not Verified":"Email Status Unavailable")+"</span><span class=\"muted\">"+esc(c.phone||"Phone not available")+"</span><button class=\"gray\" onclick=\"openCustomerProfile(\u0027"+esc(c.id)+"\u0027)\">Details</button><button class=\"red\" onclick=\"deleteCustomerAccount(\u0027"+esc(c.id)+"\u0027)\">Delete</button></div>").join("")||"No customers found.";
 }
 function filterCustomerAccounts(){
  const q=val("customerSearch").toLowerCase();
