@@ -722,9 +722,11 @@ async function ordersPage(version=pageVersion){
  <option value="">Select Customer</option>
  ${customers.map(c=>`<option value="${esc(c.id)}">${esc(c.full_name||c.email||c.id)} — ${esc(c.email||"")}</option>`).join("")}
  </select>
- <div id="orderDraftRows"><p class="muted">Pehle customer select karein. Uske tamam available products yahan list mein aa jayenge.</p></div>
+ <div class="orders-send-bar" style="position:sticky;top:8px;z-index:30;background:var(--panel,#fff);padding:10px;border-radius:10px;border:1px solid var(--border,#d8dee8);margin-bottom:10px">
+  <button class="green" id="sendOrderButton" style="width:100%;margin:0" onclick="sendOrder()">SEND SELECTED ORDERS</button>
+ </div>
  <p class="muted">Products ke saamne checkbox mark karein. Har selected product ki quantity aur admin profit yahin set karein.</p>
- <button class="green" id="sendOrderButton" onclick="sendOrder()">SEND SELECTED ORDERS</button>
+ <div id="orderDraftRows"><p class="muted">Pehle customer select karein. Uske tamam available products yahan list mein aa jayenge.</p></div>
  </div>
  <div class="cards">
  <div class="stat">Pending Orders Total<strong id="pendingOrdersTotal">$0.00</strong><span class="muted">Selected customer ke pending orders ki Product Price</span></div>
@@ -746,20 +748,28 @@ function syncOrderCustomerFilter(id){
 }
 function renderOrderProductOptions(){
  const box=document.getElementById("orderDraftRows");if(!box)return;
- const cid=val("ocustomer");
+ const cid=val("ocustomer"),saved={};
+ box.querySelectorAll(".batch-product-row").forEach(row=>{
+  const id=String(row.dataset.productId||"");
+  saved[id]={checked:!!row.querySelector(".batch-product-check")?.checked,qty:row.querySelector(".batch-product-qty")?.value||"1",profit:row.querySelector(".batch-product-profit")?.value||"0",auto:row.querySelector(".batch-product-profit")?.dataset.auto!=="0"};
+ });
  if(!cid){box.innerHTML='<p class="muted">Pehle customer select karein. Uske available products yahan show honge.</p>';return}
  const rows=customerProductRows.filter(x=>String(x.customer_id)===cid);
  if(!rows.length){box.innerHTML='<p class="muted">Is customer ka koi available product nahi hai.</p>';return}
- box.innerHTML=rows.map(p=>`<div class="panel batch-product-row" data-product-id="${esc(p.id)}" style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:start;margin:8px 0">
-  <label style="display:flex;align-items:center;gap:7px;margin:4px 0"><input class="batch-product-check" type="checkbox" onchange="toggleSelectedProduct(this)"> Select</label>
-  <div><strong>${esc(p.product_name||"Product")}</strong><div class="muted">Product Price: $${money(p.price)}</div>
-   <div class="batch-product-fields" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-top:8px;opacity:.55">
-    <label>Quantity<input class="batch-product-qty" type="number" min="1" step="1" value="1" disabled oninput="calcSelectedProduct(this)"></label>
-    <label>Admin Profit (20% automatic)<input class="batch-product-profit" type="number" min="0" step="0.01" value="0" data-auto="1" disabled oninput="this.dataset.auto='0';calcSelectedProduct(this)"></label>
+ box.innerHTML=rows.map(p=>{
+  const state=saved[String(p.id)]||{checked:false,qty:"1",profit:"0",auto:true};
+  return `<div class="panel batch-product-row" data-product-id="${esc(p.id)}" style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:start;margin:8px 0">
+   <label style="display:flex;align-items:center;gap:7px;margin:4px 0"><input class="batch-product-check" type="checkbox" ${state.checked?"checked":""} onchange="toggleSelectedProduct(this)"> Select</label>
+   <div><strong>${esc(p.product_name||"Product")}</strong><div class="muted">Product Price: ${money(p.price)}</div>
+    <div class="batch-product-fields" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-top:8px;opacity:${state.checked?"1":".55"}">
+     <label>Quantity<input class="batch-product-qty" type="number" min="1" step="1" value="${esc(state.qty)}" ${state.checked?"":"disabled"} oninput="calcSelectedProduct(this)"></label>
+     <label>Admin Profit (20% automatic)<input class="batch-product-profit" type="number" min="0" step="0.01" value="${esc(state.profit)}" data-auto="${state.auto?"1":"0"}" ${state.checked?"":"disabled"} oninput="this.dataset.auto='0';calcSelectedProduct(this)"></label>
+    </div>
+    <div class="muted batch-product-calculation">Product Price: $0.00 · Profit: $0.00 · Expected Return: $0.00</div>
    </div>
-   <div class="muted batch-product-calculation">Product Price: $0.00 · Profit: $0.00 · Expected Return: $0.00</div>
-  </div>
- </div>`).join("");
+  </div>`;
+ }).join("");
+ box.querySelectorAll(".batch-product-row").forEach(row=>{if(row.querySelector(".batch-product-check")?.checked)calcSelectedProduct(row.querySelector(".batch-product-check"))});
 }
 function toggleSelectedProduct(check){
  const row=check.closest(".batch-product-row");if(!row)return;
