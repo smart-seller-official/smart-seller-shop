@@ -549,7 +549,7 @@ body.chat-open .chat-scroll{min-height:0;overscroll-behavior:contain}
   </div>
   <form id="loginForm">
    <h2>Customer Login</h2>
-   <input id="loginIdentity" type="email" placeholder="Email Address" required>
+   <input id="loginIdentity" type="text" inputmode="email" autocomplete="username" autocapitalize="none" placeholder="Email Address or Phone Number" required>
    <input id="loginPassword" type="password" placeholder="Password" required>
    <button class="full" id="loginButton">Login</button>
    <button type="button" class="link" onclick="showForgot()">Forgot Password?</button>
@@ -842,9 +842,26 @@ $("registerForm").addEventListener("submit",async e=>{
 $("loginForm").addEventListener("submit",async e=>{
  e.preventDefault();$("loginButton").disabled=true;msg("Logging in...");
  try{
-  const {data,error}=await db.auth.signInWithPassword({email:$("loginIdentity").value.trim(),password:$("loginPassword").value});
-  if(error)throw error;
-  await loadDashboard(data.user);
+  const identity=$("loginIdentity").value.trim();
+  const password=$("loginPassword").value;
+  let loggedInUser=null;
+  if(identity.includes("@")){
+   const {data,error}=await db.auth.signInWithPassword({email:identity,password});
+   if(error)throw error;
+   loggedInUser=data.user;
+  }else{
+   const {data,error}=await db.functions.invoke("customer-phone-login",{body:{phone:identity,password}});
+   if(error)throw error;
+   if(data?.error)throw new Error(data.error);
+   if(!data?.session?.access_token||!data?.session?.refresh_token)throw new Error("Phone login could not be completed. Please try your email.");
+   const {data:sessionData,error:sessionError}=await db.auth.setSession({
+    access_token:data.session.access_token,
+    refresh_token:data.session.refresh_token
+   });
+   if(sessionError)throw sessionError;
+   loggedInUser=sessionData.user||data.user;
+  }
+  await loadDashboard(loggedInUser);
  }catch(err){msg("Login error: "+err.message)}
  $("loginButton").disabled=false;
 });
