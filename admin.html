@@ -522,6 +522,7 @@ async function openWithdrawalCustomer(customerId){
     <td>${esc(w.status||"Pending")}</td><td>${esc(w.created_at?new Date(w.created_at).toLocaleString():"—")}</td>
     <td>${esc(w.admin_note||"—")}</td><td>${esc(w.payment_reference||"—")}</td>
     <td><pre>${esc(account||"—")}</pre></td>
+    <td>${String(w.status||"pending").trim().toLowerCase()==="pending"?'<button class="green" onclick="withdrawStatus(\''+esc(w.id)+'\',\'completed\',\''+esc(customerId)+'\')">Approve</button> <button class="red" onclick="withdrawStatus(\''+esc(w.id)+'\',\'rejected\',\''+esc(customerId)+'\')">Reject</button>':"—"}</td>
    </tr>`;
   }).join("");
   box.innerHTML=`
@@ -540,7 +541,7 @@ async function openWithdrawalCustomer(customerId){
     <div class="profile-field"><b>PENDING</b><p>${counts.pending}</p></div>
    </div>
    <h3>All Withdrawal Records</h3>
-   <div class="tablewrap"><table><thead><tr><th>#</th><th>Amount</th><th>Method</th><th>Status</th><th>Request Date</th><th>Admin Note</th><th>Payment Reference</th><th>Account Details</th></tr></thead><tbody>${history}</tbody></table></div>
+   <div class="tablewrap"><table><thead><tr><th>#</th><th>Amount</th><th>Method</th><th>Status</th><th>Request Date</th><th>Admin Note</th><th>Payment Reference</th><th>Account Details</th><th>Action</th></tr></thead><tbody>${history}</tbody></table></div>
    ${items.length?"":"<p class='muted'>No withdrawal history found.</p>"}
   `;
  }catch(e){box.innerHTML="<p class='error'>"+esc(e.message)+"</p>"}
@@ -1082,7 +1083,7 @@ async function withdrawStatus(id,status,customerId=null){
   const updateData={status:status,admin_note:adminNote};if(status==="completed")updateData.approved_at=new Date().toISOString();
   const r=await db.from("withdrawals").update(updateData).eq("id",id).ilike("status","pending").select("id").maybeSingle();
   if(r.error)throw r.error;if(!r.data){note("This withdrawal has already been processed. No changes made.",true);if(current==="withdrawals")await withdrawalsPage();return}
-  note(status==="completed"?"Withdrawal approved and marked Completed.":"Withdrawal rejected. Refund trigger has been activated.");if(customerId&&document.getElementById("customerProfileModal")?.style.display==="block")await openCustomerProfile(customerId);if(current==="withdrawals")await withdrawalsPage();
+  note(status==="completed"?"Withdrawal approved and marked Completed.":"Withdrawal rejected. Refund trigger has been activated.");if(customerId&&document.getElementById("customerProfileModal")?.style.display==="block")await openCustomerProfile(customerId);if(customerId&&document.getElementById("withdrawalCustomerModal")?.style.display==="block")await openWithdrawalCustomer(customerId);if(current==="withdrawals")await withdrawalsPage();
  }catch(e){note("Withdrawal error: "+e.message,true)}
 }
 
