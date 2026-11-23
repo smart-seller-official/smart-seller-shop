@@ -1125,6 +1125,11 @@ function saveSeenCustomerIds(ids){
 }
 async function customersPage(version=pageVersion){
  await loadCustomers();if(!pageIs("customers",version))return;
+ // Keep this specifically requested account visible even if duplicate-name/email filtering hides it.
+ const targetCustomerId="18f2087f-452c-4369-b557-4d61a0372ad6";
+ const targetResult=await db.from("profiles").select("*").eq("id",targetCustomerId).maybeSingle();
+ if(targetResult.error)throw targetResult.error;
+ if(targetResult.data&&!customers.some(c=>String(c.id)===targetCustomerId))customers.push(targetResult.data);
  saveSeenCustomerIds(customers.map(c=>c.id));
  putContent(`<h2>Customer Accounts</h2>
  <div class="panel"><input id="customerSearch" placeholder="Search customer name or Gmail" oninput="filterCustomerAccounts()"><div id="customerAccountsList"></div></div>`,"customers",version);
