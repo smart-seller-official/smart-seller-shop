@@ -354,7 +354,7 @@ async function start(){
  const savedButton=[...document.querySelectorAll("aside button")].find(b=>(b.getAttribute("onclick")||"").includes("'"+savedAdminPage+"'"));
  await go(savedAdminPage,savedButton||document.querySelector("aside button"));
  await refreshAdminBadges();
- if(!window.adminBadgeTimer)window.adminBadgeTimer=setInterval(()=>{refreshAdminBadges();if(current==="kyc_submissions")kycPage();if(current==="withdrawals")withdrawalsPage();if(current==="customers")customersPage();if(current==="customer_products"||current==="orders")refreshCustomerProducts();if(current==="notifications")notificationsPage();},5000);
+ if(!window.adminBadgeTimer)window.adminBadgeTimer=setInterval(()=>{refreshAdminBadges();if(current==="dashboard")dashboard();if(current==="kyc_submissions")kycPage();if(current==="withdrawals")withdrawalsPage();if(current==="customers")customersPage();if(current==="customer_products"||current==="orders")refreshCustomerProducts();if(current==="notifications")notificationsPage();},5000);
 }
 async function check(){
  if(!db)return;
@@ -617,7 +617,10 @@ async function dashboard(version){
  let html="<div class='dashboard-page'><h2>Dashboard</h2><div class='cards'>";
  for(const [table,name,page] of tables){
   let displayCount=0,error=false;
-  if(table==="orders"){
+  if(table==="profiles"){
+   await loadCustomers();
+   displayCount=customers.length;
+  }else if(table==="orders"){
    const r=await db.from("orders").select("customer_id,status").limit(5000);
    if(r.error)error=true;
    else displayCount=new Set((r.data||[]).filter(o=>["pending","pickup","picked","picked_up","picked up","processing","shipping"].includes(String(o.status||"").trim().toLowerCase())).map(o=>String(o.customer_id||"")).filter(Boolean)).size;
