@@ -319,13 +319,17 @@ async function refreshAdminBadges(){
   const customerRows=results[4].data||[];
   const customerCount=customerRows.length;
   const seenCustomerIds=readSeenCustomerIds();
-  let customerBaselineReady=false;
-  try{customerBaselineReady=localStorage.getItem("smartSellerCustomerBaselineReady")==="1";}catch(e){}
-  if(!customerBaselineReady){
+  let customerBaselineReady=false,customerSeenListExists=false;
+  try{
+   customerBaselineReady=localStorage.getItem("smartSellerCustomerBaselineReady")==="1";
+   customerSeenListExists=localStorage.getItem("smartSellerSeenCustomerIds")!==null;
+  }catch(e){}
+  /* First run on this browser: treat existing accounts as already seen. */
+  if(!customerBaselineReady||!customerSeenListExists){
    saveSeenCustomerIds(customerRows.map(c=>c.id));
    try{localStorage.setItem("smartSellerCustomerBaselineReady","1");}catch(e){}
   }
-  const newCustomerCount=current==="customers"?0:(customerBaselineReady?customerRows.filter(c=>!seenCustomerIds.has(String(c.id))).length:0);
+  const newCustomerCount=current==="customers"?0:(customerBaselineReady&&customerSeenListExists?customerRows.filter(c=>!seenCustomerIds.has(String(c.id))).length:0);
   if(current==="customers"){
    saveSeenCustomerIds(customerRows.map(c=>c.id));
    try{localStorage.setItem("smartSellerCustomerBaselineReady","1");}catch(e){}
