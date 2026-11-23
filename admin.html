@@ -1167,8 +1167,26 @@ async function kycPage(version=pageVersion){
 async function kycStatus(id,status){
  if(!["approved","rejected"].includes(status))return note("Invalid KYC status.",true);
  if(!confirm("Are you sure you want to "+(status==="approved"?"APPROVE":"REJECT")+" this KYC request?"))return;
- try{const r=await db.from("kyc_submissions").update({status}).eq("id",id).ilike("status","pending").select("id").maybeSingle();if(r.error)throw r.error;if(!r.data){note("This KYC request has already been processed. No changes made.",true);if(current==="kyc_submissions")await kycPage();return}note(status==="approved"?"KYC approved successfully.":"KYC rejected successfully.");if(current==="kyc_submissions")await kycPage()}
- catch(e){note("KYC update error: "+e.message,true)}
+ try{
+  const r=await db.from("kyc_submissions").update({status}).eq("id",id).ilike("status","pending").select("id,customer_id").maybeSingle();
+  if(r.error)throw r.error;
+  if(!r.data){note("This KYC request has already been processed. No changes made.",true);if(current==="kyc_submissions")await kycPage();return}
+  if(status==="approved"){
+   const profile=await db.from("profiles").select("credit_score").eq("id",r.data.customer_id).maybeSingle();
+   if(profile.error)throw profile.error;
+   if(profile.data){
+    const oldScore=Number(profile.data.credit_score??0);
+    const update=await db.from("profiles").update({credit_score:100}).eq("id",r.data.customer_id);
+    if(update.error)throw update.error;
+    if(oldScore!==100){
+     const history=await db.from("credit_score_history").insert({customer_id:r.data.customer_id,old_score:oldScore,new_score:100,change_amount:100-oldScore,reason:"KYC approved"});
+     if(history.error)note("KYC approved and credit score set to 100, but history save failed: "+history.error.message,true);
+     else note("KYC approved successfully. Credit score is now 100%.");
+    }else note("KYC approved successfully. Credit score is 100%.");
+   }else note("KYC approved, but customer profile was not found.",true);
+  }else note("KYC rejected successfully.");
+  if(current==="kyc_submissions")await kycPage();
+ }catch(e){note("KYC update error: "+e.message,true)}
 }
 
 /* CUSTOMER ACCOUNTS */
