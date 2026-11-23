@@ -174,7 +174,7 @@ let db=null,customers=[],products=[],customerProductRows=[],current="dashboard";
 let pageVersion=0,profitEdited=false;
 let activeSupportCustomerId=null;
 let supportMessages=[];
-let orderCustomerFilterId="";
+let orderCustomerFilterId="",orderListCustomerFilterId="";
 
 try{
  if(!window.supabase)throw new Error("Supabase library load nahi hui.");
@@ -547,7 +547,7 @@ async function openDashboardOrders(){
  }catch(e){note("Orders load error: "+e.message,true)}
 }
 function openDashboardCustomerOrders(customerId){
- orderCustomerFilterId=String(customerId||"");
+ orderCustomerFilterId=String(customerId||"");orderListCustomerFilterId=orderCustomerFilterId;
  const button=[...document.querySelectorAll("aside button")].find(b=>(b.getAttribute("onclick")||"").includes("'orders'"));
  go("orders",button||undefined);
 }
@@ -758,11 +758,11 @@ async function ordersPage(version=pageVersion){
  </select>
  <button class="gray" onclick="loadOrders()">Refresh</button><div id="orderList"></div><button type="button" class="gray" id="adminRecentOrdersToggle" style="width:100%;margin-top:12px" onclick="toggleAdminRecentOrders()">Recently Orders ▾</button><div id="adminRecentOrders" style="display:none;margin-top:10px"></div></div>`,"orders",version);
  const customerSelect=document.getElementById("ocustomer"),filterSelect=document.getElementById("orderCustomerFilter");
- if(customerSelect)customerSelect.value=orderCustomerFilterId;if(filterSelect)filterSelect.value=orderCustomerFilterId;
+ if(customerSelect)customerSelect.value=orderCustomerFilterId;if(filterSelect)filterSelect.value=orderListCustomerFilterId;
  renderOrderProductOptions();await loadOrders();
 }
 function syncOrderCustomerFilter(id){
- orderCustomerFilterId=String(id||"");const filter=document.getElementById("orderCustomerFilter");if(filter)filter.value=orderCustomerFilterId;loadOrders();renderOrderProductOptions();
+ orderCustomerFilterId=String(id||"");orderListCustomerFilterId=orderCustomerFilterId;const filter=document.getElementById("orderCustomerFilter");if(filter)filter.value=orderListCustomerFilterId;loadOrders();renderOrderProductOptions();
 }
 function renderOrderProductOptions(){
  const box=document.getElementById("orderDraftRows");if(!box)return;
@@ -807,8 +807,7 @@ function calcSelectedProduct(control){
  if(calc)calc.textContent="Product Price: $"+money(total)+" · Profit: $"+money(profit)+" · Expected Return: $"+money(total+profit);
 }
 function applyOrderCustomerFilter(id){
- orderCustomerFilterId=String(id||"");const customer=document.getElementById("ocustomer");if(customer)customer.value=orderCustomerFilterId;
- const filter=document.getElementById("orderCustomerFilter");if(filter)filter.value=orderCustomerFilterId;renderOrderProductOptions();loadOrders();
+ orderListCustomerFilterId=String(id||"");loadOrders();
 }
 async function sendOrder(){
  const cid=val("ocustomer"),rows=[...document.querySelectorAll(".batch-product-row")].filter(row=>row.querySelector(".batch-product-check")?.checked);
@@ -868,7 +867,7 @@ async function creditCompletedOrder(orderId){
 async function loadOrders(){
  const version=pageVersion;if(current!=="orders")return;
  const target=document.getElementById("orderList");if(!target||!target.isConnected)return;
- const selectedCustomer=String(orderCustomerFilterId||"");
+ const selectedCustomer=String(orderListCustomerFilterId||"");
  const r=await db.from("orders").select("*").order("created_at",{ascending:false}).limit(300);
  if(r.error){if(pageIs("orders",version))note(r.error.message,true);return}
  const allRows=r.data||[];
