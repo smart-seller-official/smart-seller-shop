@@ -223,6 +223,31 @@ button,input,select,textarea{font-size:14px}
 .logo{font-family:Georgia,'Times New Roman',serif!important;font-size:25px!important;font-weight:900!important;letter-spacing:1.5px!important;background:linear-gradient(90deg,#ffd166 0%,#ff7b54 24%,#f15bb5 48%,#7b9cff 72%,#55e6c1 100%);-webkit-background-clip:text;background-clip:text;color:transparent!important;-webkit-text-stroke:.35px #fff;text-shadow:0 2px 12px #f5b94255;position:relative;line-height:1.15;padding-bottom:5px}
 
 .logo span{color:#d8b66b!important}
+/* Smart Seller customer panel: clean dropshipping-style theme */
+body:has(#dashboard:not(.hidden)){background:#f3f6fa;background-image:radial-gradient(ellipse at 92% 0%,#e8eef7 0,transparent 42%);background-attachment:fixed}
+#dashboard .card,#dashboard .stat,#dashboard .product-card,#dashboard .data-card{background:#fff;border:1px solid #e5ebf3;border-radius:16px;box-shadow:0 6px 20px #1e3a5f0c}
+#dashboard .page-title h2{color:#1e293b}
+#dashboard .page-title p,#dashboard .muted{color:#718096}
+#productsPage #shopList .product-card,#productsPage #myProductsList .product-card{background:#fff;border:1px solid #e4eaf2;border-radius:14px;box-shadow:0 5px 16px #1e3a5f10;padding:8px}
+#productsPage #shopList .product-image,#productsPage #myProductsList .product-image{border-radius:10px;background:#f1f5f9}
+#productsPage .my-products-count{background:#eef4fb;border:1px solid #dce6f2;color:#29496f;border-radius:12px}
+#walletPage{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:stretch}
+#walletPage>.stat{margin:0;min-width:0;padding:16px;border-radius:15px;background:#fff;border:1px solid #e2eaf3;box-shadow:0 5px 17px #1e3a5f0c;color:#53657b;font-size:13px;font-weight:700}
+#walletPage>.stat:first-of-type{grid-column:1/-1;background:linear-gradient(125deg,#fff 0%,#f2f7fc 100%)}
+#walletPage>.stat strong{display:block;margin-top:9px;font-size:25px;line-height:1.2;overflow-wrap:anywhere}
+#walletPage>#walletMessage,#walletPage>.muted,#walletPage>.card{grid-column:1/-1}
+#walletPage>.card{margin:0}
+@media(max-width:600px){
+ body:has(#dashboard:not(.hidden)){background:#f3f5f8;background-image:radial-gradient(ellipse at 92% 0%,#e8eef7 0,transparent 42%);background-attachment:fixed}
+ #dashboard .card,#dashboard .stat,#dashboard .product-card,#dashboard .data-card{background:#fff;border:1px solid #e5ebf3;border-radius:15px;box-shadow:0 5px 17px #1e3a5f0c}
+ #dashboard .page-title h2{color:#1e293b}
+ #productsPage #shopList .product-card,#productsPage #myProductsList .product-card{padding:8px;border-radius:13px}
+ #productsPage #shopList .product-image,#productsPage #myProductsList .product-image{border-radius:9px}
+ #walletPage{gap:9px}
+ #walletPage>.stat{padding:13px 11px;font-size:12px;border-radius:13px}
+ #walletPage>.stat strong{font-size:21px}
+}
+
 </style>
 </head>
 <body>
