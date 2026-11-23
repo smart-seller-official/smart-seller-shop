@@ -1203,7 +1203,6 @@ async function loadCustomerAuthStatuses(force=false){
 }
 async function customersPage(version=pageVersion){
  await loadCustomers();if(!pageIs("customers",version))return;
- try{await loadCustomerAuthStatuses();}catch(e){note("Email verification status unavailable: "+e.message,true);}
  if(!pageIs("customers",version))return;
  saveSeenCustomerIds(customers.map(c=>c.id));
  try{localStorage.setItem("smartSellerCustomerBaselineReady","1");}catch(e){}
