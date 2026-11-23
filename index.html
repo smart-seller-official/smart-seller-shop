@@ -623,7 +623,7 @@ body.chat-open .chat-scroll{min-height:0;overscroll-behavior:contain}
  <section id="supportPage" class="page hidden chat-screen">
   <div class="chat-topbar"><button type="button" class="chat-back" onclick="openPage('home')">‹</button><div><strong>Customer Service</strong><small>We are here to help</small></div><span class="chat-online"></span></div>
   <div id="supportList" class="chat-scroll"></div>
-  <form id="supportForm" class="chat-composer"><textarea id="supportInput" placeholder="Type a message..." rows="1"></textarea><input id="supportImage" type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden><button type="button" class="gray" onclick="document.getElementById('supportImage').click()" aria-label="Attach image">📎</button><button id="supportButton" aria-label="Send message">➤</button></form>
+  <form id="supportForm" class="chat-composer"><textarea id="supportInput" placeholder="Type a message..." rows="1"></textarea><div id="supportImagePreview" style="display:none;flex:0 0 100%;padding:4px 2px 2px"><img id="supportImagePreviewImg" alt="Selected picture preview" style="display:block;max-width:110px;max-height:90px;object-fit:contain;border-radius:9px;border:1px solid #d5dce6"><small id="supportImagePreviewName" style="display:block;font-size:10px;color:#64748b;margin-top:3px"></small></div><input id="supportImage" type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden><button type="button" class="gray" onclick="document.getElementById('supportImage').click()" aria-label="Attach image">📎</button><button id="supportButton" aria-label="Send message">➤</button></form>
   <p id="supportMessage" class="chat-feedback"></p>
  </section>
 
@@ -1674,7 +1674,8 @@ window.loadSupport=async function(){
  if(!currentUser)return;
  const box=$("supportList");box.textContent="";
  try{
-  const {data,error}=await db.from("support_chat_messages").select("id,customer_id,sender,message,image_path,created_at").eq("customer_id",currentUser.id).order("created_at",{ascending:true});
+  const readUpdate=await db.rpc("mark_customer_support_messages_read");if(readUpdate.error)throw readUpdate.error;
+  const {data,error}=await db.from("support_chat_messages").select("id,customer_id,sender,sender_role,message,image_path,created_at,read_at").eq("customer_id",currentUser.id).order("created_at",{ascending:true});
   if(error)throw error;box.innerHTML="";
   if(!data||data.length===0){box.textContent="No messages yet. Send a message to Customer Service.";return;}
   for(const m of data){
@@ -1682,11 +1683,21 @@ window.loadSupport=async function(){
    const who=document.createElement("strong");who.textContent=m.sender==="admin"?"Customer Service - Admin":"You";
    const body=document.createElement("p");body.textContent=m.message||"";item.append(who,body);
    if(m.image_path){const signed=await db.storage.from("support-chat-images").createSignedUrl(m.image_path,3600);if(signed.error)throw signed.error;const link=document.createElement("a");link.href=signed.data.signedUrl;link.target="_blank";link.rel="noopener";const img=document.createElement("img");img.src=signed.data.signedUrl;img.alt="Customer Service attachment";img.style.cssText="display:block;max-width:230px;max-height:230px;width:auto;height:auto;object-fit:contain;border-radius:10px;margin-top:7px";link.appendChild(img);item.appendChild(link);}
-   const time=document.createElement("small");time.className="chat-time";time.textContent=m.created_at?new Date(m.created_at).toLocaleString():"";item.appendChild(time);box.appendChild(item);
+   const time=document.createElement("small");time.className="chat-time";time.textContent=m.created_at?new Date(m.created_at).toLocaleString():"";item.appendChild(time);
+   if(String(m.sender_role||m.sender||"").toLowerCase()==="customer"){const ticks=document.createElement("small");ticks.textContent=" ✓✓";ticks.title=m.read_at?"Seen by Customer Service":"Sent";ticks.style.cssText="font-size:13px;font-weight:800;color:"+(m.read_at?"#1685e8":"#94a3b8")+";margin-left:5px";item.appendChild(ticks);}
+   box.appendChild(item);
   }
   box.scrollTop=box.scrollHeight;
  }catch(err){box.textContent="Customer Service error: "+err.message;console.error("Support chat:",err);}
 };
+
+$("supportImage").addEventListener("change",()=>{
+ const file=$("supportImage").files?.[0]||null,wrap=$("supportImagePreview"),img=$("supportImagePreviewImg"),name=$("supportImagePreviewName");
+ if(!file){wrap.style.display="none";img.removeAttribute("src");name.textContent="";return;}
+ if(!file.type.startsWith("image/")){wrap.style.display="none";img.removeAttribute("src");name.textContent="";return;}
+ if(img.dataset.objectUrl)URL.revokeObjectURL(img.dataset.objectUrl);
+ const url=URL.createObjectURL(file);img.src=url;img.dataset.objectUrl=url;name.textContent=file.name;wrap.style.display="block";
+});
 
 $("supportForm").addEventListener("submit",async e=>{
  e.preventDefault();
@@ -1708,7 +1719,7 @@ $("supportForm").addEventListener("submit",async e=>{
 
   if(error)throw error;
 
-  $("supportInput").value="";$("supportImage").value="";
+  $("supportInput").value="";$("supportImage").value="";$("supportImage").dispatchEvent(new Event("change"));
   $("supportMessage").textContent="Message sent to Customer Service.";
 
   await loadSupport();
