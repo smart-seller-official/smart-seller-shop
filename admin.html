@@ -35,6 +35,7 @@ th{background:#f4f6fb}
 .error{color:#d33}.ok{color:#14866b}
 .customer{padding:12px;border:1px solid #e1e6ef;border-radius:8px;margin:7px 0;cursor:pointer}
 .customer:hover{background:#f3f5ff}
+.cp-customer-row{display:flex;align-items:center;gap:12px;flex-wrap:nowrap;white-space:nowrap;overflow-x:auto;padding:10px 12px;border:1px solid #e1e6ef;border-radius:8px;margin:7px 0;background:#fff}.cp-customer-row b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}.cp-customer-row .muted{flex:0 0 auto}.cp-customer-row button{flex:0 0 auto;margin:0}
 .support-row{display:flex;align-items:center;gap:10px;flex-wrap:nowrap;white-space:nowrap;overflow-x:auto;background:#fff;padding:10px 12px;margin:0 0 6px;border:1px solid #e1e6ef;border-radius:8px;font-size:12px}
 .support-customer{flex:0 0 190px;min-width:130px;overflow:hidden;text-overflow:ellipsis;font-weight:700;color:#5145c5;cursor:pointer}
 .support-email{flex:0 0 210px;min-width:150px;overflow:hidden;text-overflow:ellipsis;color:#5145c5;cursor:pointer}
@@ -699,16 +700,16 @@ async function customerProductsPage(version=pageVersion){
  if(r.error)throw r.error;if(!pageIs("customer_products",version))return;
  const groups={};(r.data||[]).forEach(p=>(groups[p.customer_id]??=[]).push(p));
  window.customerProductGroups=groups;
- putContent(`<h2>Customer Products</h2><div class="panel"><input id="cpSearch" placeholder="Search customer name or Gmail" oninput="filterCP()"><div id="customerProductList"></div></div>`,"customer_products",version);
+ putContent(`<h2>Customer Products</h2><div class="panel"><input id="cpSearch" placeholder="Search customer name" oninput="filterCP()"><div id="customerProductList"></div></div>`,"customer_products",version);
  renderCP(Object.keys(groups));
 }
 function renderCP(ids){
  const target=document.getElementById("customerProductList");if(!target||!target.isConnected)return;
- target.innerHTML=ids.map(id=>`<div class="customer"><b class="click-customer" onclick="openCustomerProfile('${esc(id)}')">${esc(customerName(id))}</b><br><span class="click-customer" onclick="openCustomerProfile('${esc(id)}')">${esc(customerEmail(id))}</span><p class="muted">${(window.customerProductGroups[id]||[]).length} products</p><button class="gray" onclick="showCustomerProducts('${esc(id)}')">View Products</button></div>`).join("")||"No customer products found.";
+ target.innerHTML=ids.map(id=>`<div class="cp-customer-row"><b class="click-customer" onclick="openCustomerProfile('${esc(id)}')">${esc(customerName(id))}</b><span class="muted">${(window.customerProductGroups[id]||[]).length} products</span><button class="gray" onclick="showCustomerProducts('${esc(id)}')">View Products</button></div>`).join("")||"No customer products found.";
 }
 function filterCP(){
  const q=val("cpSearch").toLowerCase(),groups=window.customerProductGroups||{};
- renderCP(Object.keys(groups).filter(id=>(String(customerName(id))+" "+customerEmail(id)).toLowerCase().includes(q)));
+ renderCP(Object.keys(groups).filter(id=>String(customerName(id)).toLowerCase().includes(q)));
 }
 function showCustomerProducts(id){
  const items=window.customerProductGroups?.[id]||[];
