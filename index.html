@@ -1216,7 +1216,10 @@ function openOrderTracking(o){
  const subtitle=document.createElement("p");subtitle.className="ot-sub";subtitle.textContent="Track your order status at every stage.";panel.appendChild(subtitle);
  const summary=document.createElement("div");summary.className="ot-summary";
  [["Order ID",o.id||"-"],["Order Date",o.created_at?new Date(o.created_at).toLocaleDateString():"-"],["Quantity",safeText(o.quantity)],["Total Amount",money(orderPrice(o))]].forEach(([label,value])=>{const cell=document.createElement("div");const small=document.createElement("small");small.textContent=label;const strong=document.createElement("strong");strong.textContent=value;cell.append(small,strong);summary.appendChild(cell)});panel.appendChild(summary);
- const progress=document.createElement("div");progress.className="ot-progress";orderProgress(o.status).forEach(step=>progress.appendChild(step));panel.appendChild(progress);
+ const orderState=String(o.status||"pending").toLowerCase().trim();
+ if(orderState!=="pending"&&orderState!=="pickup"){
+  const progress=document.createElement("div");progress.className="ot-progress";orderProgress(o.status).forEach(step=>progress.appendChild(step));panel.appendChild(progress);
+ }
  const product=document.createElement("div");product.className="ot-product";
  const images=productImageList(o.product_image||o.image||o.image_url);
  if(images.length){const photo=document.createElement("img");photo.className="ot-photo";photo.src=images[0];photo.alt="Product";photo.style.cursor="zoom-in";photo.onclick=e=>{e.stopPropagation();openProductPictureViewer(images,0,o.product_name||"Product")};photo.onerror=()=>{photo.onerror=null;photo.src="https://placehold.co/240x240/f1edff/5141a5?text=Product"};product.appendChild(photo)}
@@ -1225,7 +1228,9 @@ function openOrderTracking(o){
  const category=document.createElement("div");category.style.color="#626887";category.textContent="Product order";
  const price=document.createElement("div");price.className="ot-price";price.textContent=money(orderPrice(o));
  details.append(name,category,price);product.appendChild(details);panel.appendChild(product);
- const current=document.createElement("div");current.className="ot-status";current.textContent="✓  Current Status: "+orderStatus(o);panel.appendChild(current);
+ if(orderState==="pending"||orderState==="pickup"){
+  const current=document.createElement("div");current.className="ot-status";current.textContent="✓  Current Status: PICKUP";panel.appendChild(current);
+ }
  const info=document.createElement("div");info.className="ot-info";
  const infoTitle=document.createElement("h3");infoTitle.textContent="Order Summary";info.appendChild(infoTitle);
  [["Product Amount",money(orderPrice(o))],["Expected Profit",money(orderProfit(o))],["Expected Return",money(orderPrice(o)+orderProfit(o))],["Order Date",o.created_at?new Date(o.created_at).toLocaleString():"-"]].forEach(([label,value])=>{const row=document.createElement("div");row.className="ot-row";const l=document.createElement("span");l.textContent=label;const v=document.createElement("strong");v.textContent=value;row.append(l,v);info.appendChild(row)});panel.appendChild(info);
@@ -1254,8 +1259,9 @@ function makeOrderCard(o){
  status.className="status "+(["pending","pickup","shipped","shipping","processing","picked_up","picked up"].includes(s)?"shipped":["rejected","cancelled"].includes(s)?"rejected":"");
  status.textContent="Current Status: "+orderStatus(o);
  const detailLine=document.createElement("div");detailLine.className="order-detail-line";
- detailLine.append(status);
- card.append(head,detailLine);
+ if(s==="pending"||s==="pickup")detailLine.append(status);
+ card.append(head);
+ if(s==="pending"||s==="pickup")card.append(detailLine);
  if(s!=="pending"&&s!=="pickup"){
   const progress=document.createElement("div");progress.className="order-progress";
   orderProgress(s).forEach(step=>progress.appendChild(step));
