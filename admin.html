@@ -115,6 +115,13 @@ main{padding:0 12px 12px}
 .compact-admin-page .cards{gap:5px}
 .compact-admin-page .stat strong{margin-top:2px}
 
+
+/* Remove unused notice and first-heading top gaps on every admin page */
+main{padding-top:0!important}
+#notice{margin:0!important}
+#content>h2:first-child{margin-top:0!important}
+.compact-admin-page main{padding-top:0!important}
+
 /* Keep admin customer-service chat fixed; only messages scroll */
 html:has(body.admin-chat-open),body.admin-chat-open{height:100%;overflow:hidden}
 body.admin-chat-open{position:fixed;inset:0;width:100%;height:100dvh;overflow:hidden}
