@@ -334,8 +334,9 @@ async function check(){
 async function loadCustomers(){
  const r=await db.from("profiles").select("*").limit(1000);
  if(r.error)throw r.error;
+ const {data:{user:adminUser}}=await db.auth.getUser();
  const seenEmails=new Set(),seenNames=new Set(),unique=[];
- (r.data||[]).forEach(c=>{
+ (r.data||[]).filter(c=>!adminUser||String(c.id)!==String(adminUser.id)).forEach(c=>{
   const email=String(c.email||"").trim().toLowerCase();
   const name=String(c.full_name||"").trim().toLowerCase().replace(/\\s+/g," ");
   if((email&&seenEmails.has(email))||(name&&name!=="name not available"&&seenNames.has(name)))return;
