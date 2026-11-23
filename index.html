@@ -1532,10 +1532,10 @@ async function loadHomeData(){
   if(!currentUser||currentUser.id!==userId)return;
   if(ordersResult.status==="fulfilled"&&!ordersResult.value.error){
    cachedOrders=ordersResult.value.data||[];
-   $("homeOrders").textContent=cachedOrders.length;
+   if($("homeOrders"))$("homeOrders").textContent=cachedOrders.length;
    try{renderRecentOrders()}catch(renderError){console.error("Recent orders display:",renderError)}
   }else{
-   $("homeOrders").textContent="Unavailable";
+   if($("homeOrders"))$("homeOrders").textContent="Unavailable";
    console.error("Dashboard orders:",ordersResult.status==="rejected"?ordersResult.reason:ordersResult.value.error);
   }
   if(productsResult.status==="fulfilled"&&!productsResult.value.error){
