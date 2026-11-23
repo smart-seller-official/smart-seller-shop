@@ -68,22 +68,22 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere}
 .admin-chat-open #layout{min-height:100vh}
 .admin-chat-open aside{display:none!important}
 .admin-chat-open main{padding:0!important;max-width:none!important;width:100%}
-.admin-chat-screen{height:calc(100vh - 20px);height:100dvh;max-width:760px;margin:0 auto;background:#f1f5f9;display:flex;flex-direction:column;overflow:hidden}
-.admin-chat-topbar{height:66px;flex:0 0 66px;background:#14243d;color:white;display:flex;align-items:center;gap:13px;padding:0 14px;box-shadow:0 2px 8px #0002}
-.admin-chat-topbar>div{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
-.admin-chat-topbar strong{font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.admin-chat-topbar small{font-size:11px;color:#cbd5e1;overflow:hidden;text-overflow:ellipsis}
-.admin-chat-back{font-size:30px;background:transparent;padding:0;width:38px;color:white}
-.admin-chat-online{width:9px;height:9px;border-radius:50%;background:#22c55e}
-.admin-chat-messages{flex:1;overflow-y:auto;padding:14px 12px 18px;display:flex;flex-direction:column;gap:8px}
-.admin-chat-messages .chat-bubble{max-width:82%;padding:10px 13px;border-radius:17px;margin:2px 0;box-shadow:0 1px 2px #0000000c}
-.admin-chat-messages .chat-customer{align-self:flex-start;background:#fff;color:#172943;border:1px solid #e5eaf1;border-bottom-left-radius:5px;margin-right:auto}
-.admin-chat-messages .chat-admin{align-self:flex-end;background:#dbeafe;color:#172943;border-bottom-right-radius:5px;margin-left:auto}
-.admin-chat-messages .chat-meta{font-size:10px;color:#718096;margin:0 0 5px}
-.admin-chat-messages .chat-bubble p{margin:0;white-space:pre-wrap;line-height:1.4}
-.admin-chat-compose{flex:0 0 auto;display:flex;align-items:flex-end;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #e2e8f0}
-.admin-chat-compose textarea{flex:1;min-height:42px;max-height:110px;resize:none;margin:0;border-radius:22px;padding:11px 15px;background:#f1f5f9;border:0}
-.admin-chat-compose button{min-width:44px;height:44px;flex:0 0 auto;border-radius:22px;padding:0 14px;font-size:14px;font-weight:700}.admin-chat-compose #sendSupportReply{min-width:100px;background:#159b79;color:#fff}
+.admin-chat-screen{height:100dvh;width:100%;max-width:650px;margin:0 auto;background:#f1f5f9;display:flex;flex-direction:column;overflow:hidden}
+.admin-chat-screen .chat-topbar{height:66px;flex:0 0 66px;background:#14243d;color:white;display:flex;align-items:center;gap:13px;padding:0 14px;box-shadow:0 2px 8px #0002}
+.admin-chat-screen .chat-topbar>div{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
+.admin-chat-screen .chat-topbar strong{font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.admin-chat-screen .chat-topbar small{font-size:11px;color:#cbd5e1;overflow:hidden;text-overflow:ellipsis}
+.admin-chat-screen .chat-back{font-size:30px;background:transparent;padding:0;width:38px;color:white}
+.admin-chat-screen .chat-online{width:9px;height:9px;border-radius:50%;background:#22c55e}
+.admin-chat-screen .chat-scroll{flex:1;overflow-y:auto;padding:14px 12px 18px;display:flex;flex-direction:column;gap:8px}
+.admin-chat-screen .chat-message,.admin-chat-screen .chat-reply{max-width:82%;padding:10px 13px;border-radius:17px;margin:2px 0;box-shadow:0 1px 2px #0000000c}
+.admin-chat-screen .chat-message{align-self:flex-end;background:#dbeafe;color:#172943;border-bottom-right-radius:5px}
+.admin-chat-screen .chat-reply{align-self:flex-start;background:#fff;color:#172943;border:1px solid #e5eaf1;border-bottom-left-radius:5px}
+.admin-chat-screen .chat-message p,.admin-chat-screen .chat-reply p{margin:0;white-space:pre-wrap;line-height:1.4}
+.admin-chat-screen .chat-time{display:block;color:#718096;font-size:10px;margin-top:5px;text-align:right}
+.admin-chat-screen .chat-composer{flex:0 0 auto;display:flex;align-items:flex-end;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #e2e8f0}
+.admin-chat-screen .chat-composer textarea{flex:1;min-height:42px;max-height:110px;resize:none;margin:0;border-radius:22px;padding:11px 15px;background:#f1f5f9;border:0}
+.admin-chat-screen .chat-composer button{width:44px;height:44px;flex:0 0 44px;border-radius:50%;padding:0;font-size:20px}
 
 @media(max-width:760px){
 #layout{flex-direction:column}
@@ -1206,20 +1206,18 @@ async function openSupportChat(customerId,preserveDraft=false){
  const messages=window.supportGroups?.[activeSupportCustomerId]||[];
  document.body.classList.add("admin-chat-open");
  putContent(`<section class="admin-chat-screen">
-  <div class="admin-chat-topbar"><button type="button" class="admin-chat-back" onclick="closeAdminSupportChat()">‹</button><div><strong>${esc(supportCustomerName(customerId))}</strong><small>${esc(supportCustomerEmail(customerId))}</small></div><span class="admin-chat-online"></span></div>
-  <div id="supportChatMessages" class="admin-chat-messages"></div>
-  <div class="admin-chat-compose"><textarea id="supportReply" placeholder="Type a message..." rows="1">${preserveDraft?esc(draft):""}</textarea><input id="adminSupportImage" type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden><button type="button" class="gray" onclick="document.getElementById('adminSupportImage').click()" aria-label="Attach image">📎</button><button type="button" class="green" id="sendSupportReply" aria-label="Send message">Send Reply</button></div>
+  <div class="chat-topbar"><button type="button" class="chat-back" onclick="closeAdminSupportChat()">‹</button><div><strong>${esc(supportCustomerName(customerId))}</strong><small>${esc(supportCustomerEmail(customerId))}</small></div><span class="chat-online"></span></div>
+  <div id="supportChatMessages" class="chat-scroll"></div>
+  <form id="adminSupportForm" class="chat-composer"><textarea id="supportReply" placeholder="Type a message..." rows="1">${preserveDraft?esc(draft):""}</textarea><input id="adminSupportImage" type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden><button type="button" class="gray" onclick="document.getElementById('adminSupportImage').click()" aria-label="Attach image">📎</button><button type="submit" id="sendSupportReply" aria-label="Send message">➤</button></form>
  </section>`,"support_messages",pageVersion);
- const sendButton=document.getElementById("sendSupportReply");
- if(sendButton)sendButton.addEventListener("click",sendReply);
- const replyInput=document.getElementById("supportReply");
- if(replyInput)replyInput.addEventListener("keydown",event=>{if(event.key==="Enter"&&!event.shiftKey){event.preventDefault();sendReply();}});
+ const replyForm=document.getElementById("adminSupportForm");
+ if(replyForm)replyForm.addEventListener("submit",event=>{event.preventDefault();sendReply();});
  const box=document.getElementById("supportChatMessages");
  if(!box)return;
  const renderedMessages=await Promise.all(messages.map(async m=>{
    const role=String(m.sender_role||m.sender||"customer").toLowerCase();const admin=role==="admin";let imageHtml="";
-   if(m.image_path){const signed=await db.storage.from("support-chat-images").createSignedUrl(m.image_path,3600);if(signed.error)throw signed.error;const url=esc(signed.data.signedUrl);imageHtml=`<a href="${url}" target="_blank" rel="noopener"><img style="display:block;max-width:240px;max-height:240px;width:auto;height:auto;object-fit:contain;border-radius:10px;margin-top:7px" src="${url}" alt="Chat attachment"></a>`;}
-   return `<div class="chat-bubble ${admin?"chat-admin":"chat-customer"}"><div class="chat-meta">${admin?"Admin":"Customer"} · ${esc(m.created_at||"")}${!admin?(m.read_at?" · Read":" · Unread"):""}</div>${m.message?`<p>${esc(m.message)}</p>`:""}${imageHtml}</div>`;
+   if(m.image_path){const signed=await db.storage.from("support-chat-images").createSignedUrl(m.image_path,3600);if(signed.error)throw signed.error;const url=esc(signed.data.signedUrl);imageHtml=`<a href="${url}" target="_blank" rel="noopener"><img style="display:block;max-width:230px;max-height:230px;width:auto;height:auto;object-fit:contain;border-radius:10px;margin-top:7px" src="${url}" alt="Customer Service attachment"></a>`;}
+   return `<div class="${admin?"chat-message":"chat-reply"}">${m.message?`<p>${esc(m.message)}</p>`:""}${imageHtml}<small class="chat-time">${m.created_at?new Date(m.created_at).toLocaleString():""}</small></div>`;
   }));
   box.innerHTML=renderedMessages.join("")||"No messages.";
  const unreadIds=messages.filter(m=>String(m.sender_role||m.sender||"").toLowerCase()==="customer"&&!m.read_at).map(m=>m.id).filter(Boolean);
