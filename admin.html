@@ -753,7 +753,7 @@ async function ordersPage(version=pageVersion){
  <div class="panel"><h3>Orders List</h3>
  <label>Filter Orders by Customer</label>
  <select id="orderCustomerFilter" onchange="applyOrderCustomerFilter(this.value)">
- <option value="">All Customers</option>
+ <option value="">Select Customer</option>
  ${customers.map(c=>`<option value="${esc(c.id)}">${esc(c.full_name||c.email||c.id)} — ${esc(c.email||"")}</option>`).join("")}
  </select>
  <button type="button" class="gray" id="refreshOrdersListButton" onclick="refreshOrdersList(this)">Refresh</button><div id="orderList"></div><button type="button" class="gray" id="adminRecentOrdersToggle" style="width:100%;margin-top:12px" onclick="toggleAdminRecentOrders()">Recently Orders ▾</button><div id="adminRecentOrders" style="display:none;margin-top:10px"></div></div>`,"orders",version);
@@ -893,13 +893,13 @@ async function loadOrders(){
  const balanceByCustomer={};let totalCustomerAvailableBalance=0;
  customers.forEach(c=>{const cid=String(c.id),balance=calculateAvailableBalance(transactionsByCustomer[cid]||[]);balanceByCustomer[cid]=balance;totalCustomerAvailableBalance+=balance});
  Object.keys(transactionsByCustomer).forEach(cid=>{if(Object.prototype.hasOwnProperty.call(balanceByCustomer,cid))return;const balance=calculateAvailableBalance(transactionsByCustomer[cid]);balanceByCustomer[cid]=balance;totalCustomerAvailableBalance+=balance});
- const visibleRows=selectedCustomer?allRows.filter(x=>String(x.customer_id)===selectedCustomer):allRows;
+ const visibleRows=selectedCustomer?allRows.filter(x=>String(x.customer_id)===selectedCustomer):[];
  const completedRows=visibleRows.filter(x=>["completed","complete","delivered"].includes(String(x.status||"").toLowerCase().trim()));
  const activeRows=visibleRows.filter(x=>!["completed","complete","delivered"].includes(String(x.status||"").toLowerCase().trim()));
  const visibleOrderIds=new Set(visibleRows.map(x=>String(x.id))),visibleItems=items.filter(i=>visibleOrderIds.has(String(i.order_id)));
  let pendingTotal=0;
  visibleRows.forEach(x=>{if(String(x.status||"").toLowerCase().trim()!=="pending")return;const oi=visibleItems.filter(i=>String(i.order_id)===String(x.id));const itemTotal=oi.reduce((sum,i)=>sum+Number(i.unit_price||0)*Number(i.quantity||0),0);const price=oi.length?itemTotal:Number(x.total_amount??x.product_price??0);if(Number.isFinite(price))pendingTotal+=price});
- const selectedBalance=selectedCustomer?(balanceByCustomer[selectedCustomer]||0):totalCustomerAvailableBalance;
+ const selectedBalance=selectedCustomer?(balanceByCustomer[selectedCustomer]||0):0;
  const pe=document.getElementById("pendingOrdersTotal"),be=document.getElementById("customerAvailableBalanceTotal");if(pe)pe.textContent="$"+money(pendingTotal);if(be)be.textContent="$"+money(selectedBalance);
  if(!pageIs("orders",version))return;const list=document.getElementById("orderList");if(!list||!list.isConnected)return;
  const statuses=[["pending","Pickup"],["picked","Picked"],["processing","Processing"],["shipping","Shipping"],["completed","Complete"],["cancelled","Cancel"]];
