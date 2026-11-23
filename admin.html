@@ -1120,19 +1120,19 @@ async function kycPage(version=pageVersion){
  target.innerHTML=customerGroups.map(([customerId,requests])=>{
   const customer=customers.find(c=>String(c.id)===String(customerId));
   const customerLabel=(customer?.full_name||"Name not available")+" — "+(customer?.email||"Email not available");
-  const requestRows=requests.map(x=>{
+  const visibleRows=requests.map(x=>{
    const pending=String(x.status||"").trim().toLowerCase()==="pending";
    return `<div class="kyc-row">
     <span>${esc(x.document_type||"Not available")}</span>
     <b class="${pending?"ok":"muted"}">${esc(x.status||"Pending")}</b>
-    <button class="gray" onclick="openKycCustomer('${esc(customerId)}')">View ID Card</button>
     ${pending?`<button class="green" onclick="kycStatus('${esc(x.id)}','approved')">Approve</button><button class="red" onclick="kycStatus('${esc(x.id)}','rejected')">Reject</button>`:`<span class="muted">Decision already made</span>`}
+    <button class="gray" onclick="openKycCustomer('${esc(customerId)}')">View ID Card</button>
    </div>`;
   }).join("");
-  return `<details class="panel kyc-customer-group">
-   <summary class="kyc-row"><span class="kyc-customer" onclick="event.preventDefault();openKycCustomer('${esc(customerId)}')">${esc(customerLabel)}</span><span class="muted">${requests.length} KYC request${requests.length===1?"":"s"}</span><span class="muted kyc-expand-label">Open</span></summary>
-   <div class="kyc-requests">${requestRows}</div>
-  </details>`;
+  return `<div class="panel">
+   <div class="kyc-row"><span class="kyc-customer" onclick="openKycCustomer('${esc(customerId)}')">${esc(customerLabel)}</span><span class="muted">${requests.length} KYC request${requests.length===1?"":"s"}</span></div>
+   ${visibleRows}
+  </div>`;
  }).join("")||"No KYC requests found.";
 }
 async function kycStatus(id,status){
