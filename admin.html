@@ -756,7 +756,7 @@ async function ordersPage(version=pageVersion){
  <option value="">All Customers</option>
  ${customers.map(c=>`<option value="${esc(c.id)}">${esc(c.full_name||c.email||c.id)} — ${esc(c.email||"")}</option>`).join("")}
  </select>
- <button class="gray" onclick="loadOrders()">Refresh</button><div id="orderList"></div><button type="button" class="gray" id="adminRecentOrdersToggle" style="width:100%;margin-top:12px" onclick="toggleAdminRecentOrders()">Recently Orders ▾</button><div id="adminRecentOrders" style="display:none;margin-top:10px"></div></div>`,"orders",version);
+ <button type="button" class="gray" id="refreshOrdersListButton" onclick="refreshOrdersList(this)">Refresh</button><div id="orderList"></div><button type="button" class="gray" id="adminRecentOrdersToggle" style="width:100%;margin-top:12px" onclick="toggleAdminRecentOrders()">Recently Orders ▾</button><div id="adminRecentOrders" style="display:none;margin-top:10px"></div></div>`,"orders",version);
  const customerSelect=document.getElementById("ocustomer"),filterSelect=document.getElementById("orderCustomerFilter");
  if(customerSelect)customerSelect.value=orderCustomerFilterId;if(filterSelect)filterSelect.value=orderListCustomerFilterId;
  renderOrderProductOptions();await loadOrders();
@@ -863,6 +863,12 @@ async function creditCompletedOrder(orderId){
  if(!profitCheck.data.length&&profit>0){
   const result=await db.from("wallet_transactions").insert({customer_id:customerId,amount:profit,transaction_type:"profit",status:"completed",description:"Completed order profit",reference_id:orderId});if(result.error)throw result.error;
  }
+}
+async function refreshOrdersList(button){
+ if(current!=="orders")return;
+ const btn=button||document.getElementById("refreshOrdersListButton");if(btn){btn.disabled=true;btn.textContent="Refreshing..."}
+ try{await loadOrders()}catch(e){console.error("Orders refresh failed:",e);note("Orders refresh error: "+(e?.message||e),true)}
+ finally{const currentButton=document.getElementById("refreshOrdersListButton");if(currentButton){currentButton.disabled=false;currentButton.textContent="Refresh"}}
 }
 async function loadOrders(){
  const version=pageVersion;if(current!=="orders")return;
