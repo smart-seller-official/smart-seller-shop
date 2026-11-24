@@ -595,6 +595,11 @@ body.chat-open .chat-scroll{min-height:0;overscroll-behavior:contain}
 <div id="dashboard" class="hidden">
  <section id="homePage" class="page">
   <div class="page-title" style="text-align:center;background:linear-gradient(125deg,#10243d 0%,#1d3d60 72%,#294d70 100%);color:#fff;border:1px solid #c9a85f;border-radius:18px;padding:18px;margin:0 0 16px;box-shadow:0 10px 25px rgba(16,36,61,.18)"><h2 style="color:#fff;margin:0">Dashboard</h2></div>
+  <div id="installAppCard" class="card" style="text-align:center;border:1px solid #d8b66b">
+   <h3 style="margin:0 0 6px">Install Smart Seller</h3>
+   <p class="muted" style="margin:0 0 10px">Install the app on your device for quick access.</p>
+   <button id="installAppButton" type="button" class="full">⬇ Install App</button>
+  </div>
   <div class="stats">
    <div class="stat"><div class="stat-icon">💰</div><div class="stat-label">Wallet Balance</div><strong id="homeBalance" class="green"></strong><button class="green-btn" onclick="openPage('wallet')">View Wallet</button></div>
    <div class="stat"><div class="stat-icon">⭐</div><div class="stat-label">Credit Score</div><strong id="homeCredit" class="purple">-</strong><button onclick="toggleProfile()">View Profile</button></div>
@@ -1902,6 +1907,43 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden)verifyCust
   }
  }catch(err){msg("Session error: "+err.message)}
 })();
+
+/* Smart Seller install button: customer dashboard only */
+let smartSellerInstallPrompt=null;
+const installAppCard=$("installAppCard");
+const installAppButton=$("installAppButton");
+function smartSellerIsInstalled(){
+ return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone===true;
+}
+function updateSmartSellerInstallButton(){
+ if(installAppCard)installAppCard.classList.toggle("hidden",smartSellerIsInstalled());
+}
+window.addEventListener("beforeinstallprompt",event=>{
+ event.preventDefault();
+ smartSellerInstallPrompt=event;
+ updateSmartSellerInstallButton();
+});
+window.addEventListener("appinstalled",()=>{
+ smartSellerInstallPrompt=null;
+ updateSmartSellerInstallButton();
+});
+if(installAppButton){
+ installAppButton.addEventListener("click",async()=>{
+  if(smartSellerIsInstalled()){updateSmartSellerInstallButton();return;}
+  if(smartSellerInstallPrompt){
+   smartSellerInstallPrompt.prompt();
+   await smartSellerInstallPrompt.userChoice;
+   smartSellerInstallPrompt=null;
+   updateSmartSellerInstallButton();
+   return;
+  }
+  alert("To install Smart Seller:\n\nAndroid/Chrome: Open the browser menu (⋮) and choose Install app or Add to Home screen.\niPhone/iPad: Tap Share and choose Add to Home Screen.");
+ });
+}
+updateSmartSellerInstallButton();
+if("serviceWorker" in navigator){
+ window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(error=>console.warn("App service worker:",error)));
+}
 </script>
 </body>
 </html>
