@@ -299,9 +299,10 @@ async function refreshAdminBadges(){
    db.from("withdrawals").select("id,status"),
    db.from("profiles").select("id"),
    db.from("admin_notifications").select("id",{count:"exact",head:true}).eq("is_read",false).in("source_table",["withdrawals","kyc_submissions","support_chat_messages","support_messages"]),
-   db.from("admin_notifications").select("id").eq("is_read",false).in("source_table",["withdrawals","kyc_submissions","support_chat_messages","support_messages"]).order("created_at",{ascending:false}).limit(100)
+   db.from("admin_notifications").select("id").eq("is_read",false).in("source_table",["withdrawals","kyc_submissions","support_chat_messages","support_messages"]).order("created_at",{ascending:false}).limit(100),
+   db.from("admin_notifications").select("id",{count:"exact",head:true}).eq("is_read",false).eq("source_table","customer_first_login")
   ]);
-  if(results[0].error)throw results[0].error;if(results[1].error)throw results[1].error;if(results[2].error)throw results[2].error;if(results[3].error)throw results[3].error;if(results[4].error)throw results[4].error;if(results[5].error)throw results[5].error;if(results[6].error)throw results[6].error;
+  if(results[0].error)throw results[0].error;if(results[1].error)throw results[1].error;if(results[2].error)throw results[2].error;if(results[3].error)throw results[3].error;if(results[4].error)throw results[4].error;if(results[5].error)throw results[5].error;if(results[6].error)throw results[6].error;if(results[7].error)throw results[7].error;
   const notificationIds=(results[6].data||[]).map(n=>String(n.id));
   if(adminKnownNotificationIds===null)adminKnownNotificationIds=new Set(notificationIds);
   else{
@@ -316,24 +317,7 @@ async function refreshAdminBadges(){
   ).length;
   const kycPending=(results[2].data||[]).filter(x=>String(x.status||"").trim().toLowerCase()==="pending").length;
   const withdrawalsPending=(results[3].data||[]).filter(x=>String(x.status||"").trim().toLowerCase()==="pending").length;
-  const customerRows=results[4].data||[];
-  const customerCount=customerRows.length;
-  const seenCustomerIds=readSeenCustomerIds();
-  let customerBaselineReady=false,customerSeenListExists=false;
-  try{
-   customerBaselineReady=localStorage.getItem("smartSellerCustomerBaselineReady")==="1";
-   customerSeenListExists=localStorage.getItem("smartSellerSeenCustomerIds")!==null;
-  }catch(e){}
-  /* First run on this browser: treat existing accounts as already seen. */
-  if(!customerBaselineReady||!customerSeenListExists){
-   saveSeenCustomerIds(customerRows.map(c=>c.id));
-   try{localStorage.setItem("smartSellerCustomerBaselineReady","1");}catch(e){}
-  }
-  const newCustomerCount=current==="customers"?0:(customerBaselineReady&&customerSeenListExists?customerRows.filter(c=>!seenCustomerIds.has(String(c.id))).length:0);
-  if(current==="customers"){
-   saveSeenCustomerIds(customerRows.map(c=>c.id));
-   try{localStorage.setItem("smartSellerCustomerBaselineReady","1");}catch(e){}
-  }
+  const newCustomerCount=Number(results[7].count||0);
   const ob=document.getElementById("adminOrdersBadge"),mb=document.getElementById("adminMessagesBadge"),kb=document.getElementById("adminKycBadge"),wb=document.getElementById("adminWithdrawalsBadge"),cb=document.getElementById("adminCustomersBadge"),nb=document.getElementById("adminNotificationsBadge");
   if(ob)ob.textContent=pending?String(pending):"";
   if(mb){mb.textContent=waiting?String(waiting):"";mb.style.display=waiting?"inline-block":"none";}
@@ -1213,8 +1197,8 @@ async function loadCustomerAuthStatuses(force=false){
 }
 async function customersPage(version=pageVersion){
  await loadCustomers();if(!pageIs("customers",version))return;
- saveSeenCustomerIds(customers.map(c=>c.id));
- try{localStorage.setItem("smartSellerCustomerBaselineReady","1");}catch(e){}
+ const firstLoginRead=await db.from("admin_notifications").update({is_read:true}).eq("is_read",false).eq("source_table","customer_first_login");
+ if(firstLoginRead.error)throw firstLoginRead.error;
  putContent("<h2>Customer Accounts</h2><div class=\"panel\"><input id=\"customerSearch\" placeholder=\"Search customer name or Gmail\" oninput=\"filterCustomerAccounts()\"><div id=\"customerAccountsList\"></div></div>","customers",version);
  renderCustomerAccounts(customers);
 }
