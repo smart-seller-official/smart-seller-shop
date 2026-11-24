@@ -1309,6 +1309,9 @@ function renderSupportCustomers(){
   const msgs=groups[id]||[];
   const unread=msgs.filter(m=>String(m.sender_role||m.sender||"").toLowerCase()==="customer"&&!m.read_at).length;
   return (String(supportCustomerName(id))+" "+supportCustomerEmail(id)).toLowerCase().includes(q);
+ }).sort((a,b)=>{
+  const latestCustomerMessage=id=>(groups[id]||[]).filter(m=>String(m.sender_role||m.sender||"").toLowerCase()==="customer").reduce((latest,m)=>Math.max(latest,Date.parse(m.created_at)||0),0);
+  return latestCustomerMessage(b)-latestCustomerMessage(a);
  });
  box.innerHTML=ids.map(id=>{
   const msgs=groups[id]||[];
