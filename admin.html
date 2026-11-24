@@ -996,7 +996,7 @@ async function loadOrders(){
  const visibleRows=selectedCustomer?allRows.filter(x=>String(x.customer_id)===selectedCustomer):[];
  const completedRows=visibleRows.filter(x=>["completed","complete","delivered"].includes(String(x.status||"").toLowerCase().trim()));
  const recentRows=visibleRows.filter(x=>["completed","complete","delivered","cancelled","canceled"].includes(String(x.status||"").toLowerCase().trim()));
- const activeRows=visibleRows.filter(x=>!["completed","complete","delivered"].includes(String(x.status||"").toLowerCase().trim()));
+ const activeRows=visibleRows.filter(x=>!["completed","complete","delivered","cancelled","canceled"].includes(String(x.status||"").toLowerCase().trim()));
  const visibleOrderIds=new Set(visibleRows.map(x=>String(x.id))),visibleItems=items.filter(i=>visibleOrderIds.has(String(i.order_id)));
  let pendingTotal=0;
  visibleRows.forEach(x=>{if(String(x.status||"").toLowerCase().trim()!=="pending")return;const oi=visibleItems.filter(i=>String(i.order_id)===String(x.id));const itemTotal=oi.reduce((sum,i)=>sum+Number(i.unit_price||0)*Number(i.quantity||0),0);const price=oi.length?itemTotal:Number(x.total_amount??x.product_price??0);if(Number.isFinite(price))pendingTotal+=price});
