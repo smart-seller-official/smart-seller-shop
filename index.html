@@ -1745,7 +1745,7 @@ $("kycForm").addEventListener("submit",async e=>{
   if(!file||!type)throw new Error("Select the front side picture.");
   if(needsBack&&!backFile)throw new Error("Please upload the back side picture too.");
   if(!file.type.startsWith("image/")||(backFile&&!backFile.type.startsWith("image/")))throw new Error("Please upload image files only.");
-  if(file.size>5*1024*1024||(backFile&&backFile.size>5*1024*1024))throw new Error("Each picture must be smaller than 5 MB.");
+
   const stamp=Date.now(),safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,"_"),path=currentUser.id+"/"+stamp+"_front_"+safeName;
   const {error:uploadError}=await db.storage.from("kyc-documents").upload(path,file);
   if(uploadError)throw uploadError;
