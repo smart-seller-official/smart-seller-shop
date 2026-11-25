@@ -33,7 +33,7 @@ main{padding:0 20px 20px;flex:1;min-width:0;background-image:linear-gradient(115
 .panel,.stat{background:white;padding:16px;border-radius:11px;margin-bottom:14px;box-shadow:0 2px 9px #17243b0c}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
 .stat strong{display:block;font-size:25px;color:#6256cf;margin-top:7px}\n.dashboard-stat{cursor:pointer;transition:transform .15s,box-shadow .15s}\n.dashboard-stat:hover,.dashboard-stat:focus{transform:translateY(-2px);box-shadow:0 4px 14px #17243b20;outline:2px solid #6256cf}
-.dashboard-page{min-height:calc(100vh - 100px);margin:0 -20px -20px;padding:0 28px 0;background-image:linear-gradient(115deg,rgba(12,25,48,.82),rgba(26,48,77,.58)),url('https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=2000&q=85');background-size:cover;background-position:center;background-attachment:fixed;border-radius:0 0 12px 12px}.dashboard-page>h2{color:#fff;font-size:28px;margin:0 0 22px;text-shadow:0 2px 8px #0008}.dashboard-page .cards{gap:16px}.dashboard-page .dashboard-stat{min-height:145px;padding:20px;border:1px solid rgba(255,255,255,.65);border-radius:15px;background:rgba(255,255,255,.92);box-shadow:0 8px 24px rgba(0,0,0,.2);backdrop-filter:blur(8px);color:#263750;font-size:15px;font-weight:700}.dashboard-page .dashboard-stat strong{font-size:34px;margin-top:14px;color:#5145c5}.dashboard-page .stat-hint{margin-top:8px;color:#68778d;font-weight:500}.dashboard-page .dashboard-stat:hover,.dashboard-page .dashboard-stat:focus{transform:translateY(-4px);box-shadow:0 14px 30px rgba(0,0,0,.28);outline:2px solid #a9d8ff}
+.dashboard-page{min-height:calc(100vh - 100px);margin:0 -20px -20px;padding:0 28px 0;background-image:linear-gradient(115deg,rgba(12,25,48,.82),rgba(26,48,77,.58)),url('https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=2000&q=85');background-size:cover;background-position:center;background-attachment:fixed;border-radius:0 0 12px 12px}.dashboard-page>h2{color:#fff;font-size:28px;margin:0 0 22px;text-shadow:0 2px 8px #0008}.dashboard-page .cards{grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}.dashboard-page .dashboard-stat{min-width:0;min-height:112px;padding:12px 8px;font-size:12px;overflow-wrap:anywhere}.dashboard-page .dashboard-stat strong{font-size:23px;margin-top:8px}.dashboard-page .dashboard-stat{border:1px solid rgba(255,255,255,.65);border-radius:15px;background:rgba(255,255,255,.92);box-shadow:0 8px 24px rgba(0,0,0,.2);backdrop-filter:blur(8px);color:#263750;font-size:15px;font-weight:700}.dashboard-page .dashboard-stat strong{font-size:34px;margin-top:14px;color:#5145c5}.dashboard-page .stat-hint{margin-top:8px;color:#68778d;font-weight:500}.dashboard-page .dashboard-stat:hover,.dashboard-page .dashboard-stat:focus{transform:translateY(-4px);box-shadow:0 14px 30px rgba(0,0,0,.28);outline:2px solid #a9d8ff}
 .admin-welcome{margin:16px 0;max-width:none;min-height:300px;padding:72px 28px;text-align:center;border:1px solid rgba(255,255,255,.65);border-radius:24px;background:linear-gradient(135deg,rgba(9,24,48,.96),rgba(37,68,105,.94),rgba(83,66,150,.92));box-shadow:0 18px 42px rgba(0,0,0,.32);color:#fff}
 .admin-welcome-kicker{font-size:19px;letter-spacing:5px;font-weight:800;color:#dceaff;margin-bottom:18px}
 .admin-welcome h1{font-size:clamp(42px,6vw,72px);line-height:1.15;margin:0 0 22px;color:#f2d48a;font-weight:900;text-shadow:0 3px 12px #0007}
@@ -623,8 +623,30 @@ async function dashboard(version){
   const action=table==="orders"?"openDashboardOrders()":"go('"+page+"')";
   html+='<div class="stat dashboard-stat" role="button" tabindex="0" onclick="'+action+'" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();'+action+'}">'+name+'<strong>'+(error?"Error":displayCount)+'</strong><span class="stat-hint">Click to open</span></div>';
  }
+ const premium=await db.from("premium_purchases").select("customer_id").in("status",["pending","approved"]).limit(5000);
+ if(!pageIs("dashboard",version))return;
+ const premiumCount=premium.error?"Error":new Set((premium.data||[]).map(p=>String(p.customer_id||"")).filter(Boolean)).size;
+ const premiumAction="openPremiumCustomers()";
+ html+='<div class="stat dashboard-stat" role="button" tabindex="0" onclick="'+premiumAction+'" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();'+premiumAction+'}">Premium Customers<strong>'+premiumCount+'</strong><span class="stat-hint">Click to open</span></div>';
  html+="</div>";
  putContent(html+"</div>","dashboard",version);
+}
+
+async function openPremiumCustomers(){
+ try{
+  const r=await db.from("premium_purchases").select("customer_id,package_name,package_price,status,created_at").in("status",["pending","approved"]).order("created_at",{ascending:false}).limit(5000);
+  if(r.error)throw r.error;
+  const rows=r.data||[];
+  const ids=[...new Set(rows.map(x=>String(x.customer_id||"")).filter(Boolean))];
+  await loadCustomers();
+  const html="<h2>Premium Package Customers</h2><p class='muted'>Sirf un customers ki list jinhon ne premium package purchase kiya hai. Rejected/refunded requests is list mein shamil nahi hain.</p><button class='gray' onclick='go(&quot;dashboard&quot;)'>Back to Dashboard</button><div class='panel'>"+(ids.map(id=>{
+   const customer=customers.find(c=>String(c.id)===id);
+   const purchases=rows.filter(p=>String(p.customer_id)===id);
+   const packages=purchases.map(p=>esc(p.package_name||"Premium Package")+" — "+money(p.package_price)+" ("+(String(p.status).toLowerCase()==="approved"?"Active":"Pending")+")").join("<br>");
+   return "<div class='customer' style='margin:7px 0;padding:10px'><strong>"+esc(customer?.full_name||"Customer")+"</strong><div class='muted'>"+esc(customer?.email||"Email not available")+"</div><div style='margin-top:6px'>"+packages+"</div></div>";
+  }).join("")||"No premium customers yet.")+"</div>";
+  putContent(html,"dashboard",pageVersion);
+ }catch(e){note("Premium customers load error: "+e.message,true)}
 }
 
 
