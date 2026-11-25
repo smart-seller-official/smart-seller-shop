@@ -692,7 +692,8 @@ body.chat-open .chat-scroll{min-height:0;overscroll-behavior:contain}
   <p class="muted">Applied Balance includes premium package purchases and picked-up orders that are not complete.</p>
   <p id="walletMessage" class="message"></p>
   <div class="card">
-   <h3>Withdraw Money</h3>
+   <button type="button" class="full gray" id="walletWithdrawToggle" onclick="toggleWalletWithdraw()">💸 Withdraw Money ▾</button>
+   <div id="walletWithdrawContent" class="hidden" style="margin-top:10px">
    <button class="full" id="withdrawOpenButton" onclick="openWithdrawMenu()">Withdraw</button>
    <p id="withdrawalStatusBanner" class="withdrawal-status-banner hidden" aria-live="polite"></p>
    <div id="withdrawMenu" class="hidden">
@@ -727,6 +728,7 @@ body.chat-open .chat-scroll{min-height:0;overscroll-behavior:contain}
    <div id="withdrawalHistoryPanel" class="hidden">
     <div class="withdraw-history-wrap"><div class="withdraw-history-head"><strong>Withdrawal History</strong><button type="button" onclick="loadWithdrawals()">Refresh</button></div><div id="withdrawalHistory"></div></div>
     <button type="button" class="full gray" onclick="backToWithdrawMenu()">Back</button>
+   </div>
    </div>
   </div>
  </section>
@@ -1457,6 +1459,13 @@ window.toggleWalletPremium=function(){
  const opening=box.classList.contains("hidden");
  box.classList.toggle("hidden",!opening);
  button.textContent=opening?"💎 My Premium ▴":"💎 My Premium ▾";
+};
+window.toggleWalletWithdraw=function(){
+ const box=$("walletWithdrawContent"),button=$("walletWithdrawToggle");
+ if(!box||!button)return;
+ const opening=box.classList.contains("hidden");
+ box.classList.toggle("hidden",!opening);
+ button.textContent=opening?"💸 Withdraw Money ▴":"💸 Withdraw Money ▾";
 };
 function renderRecentOrders(){
  const box=$("recentOrders");if(!box)return;
