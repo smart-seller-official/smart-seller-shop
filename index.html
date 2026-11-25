@@ -676,7 +676,7 @@ body.chat-open .chat-scroll{min-height:0;overscroll-behavior:contain}
    <div id="myPremiumSummary">Loading your package history...</div>
   </div>
   <p id="premiumBalanceNote" class="muted" style="text-align:center"></p>
-  <div id="premiumPackagesList"></div>
+  <div id="premiumPackagesList" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px;align-items:start"></div>
   <button class="full gray" onclick="openPage('home')">Back to Dashboard</button>
  </section>
 
@@ -1767,7 +1767,7 @@ window.loadPremiumPage=async function(){
     const cashback=Math.round(Number(p.price||0)*0.15*100)/100;
      const benefits=(p.benefits||[]).map(x=>"<li>"+premiumEscape(x)+"</li>").concat("<li>Cashback bonus: "+money(cashback)+"</li>").join("");
     const enough=Number(balanceResult.available)>=Number(p.price);
-    return "<div class='card' style='margin:12px 0;border:1px solid #d8b66b'><h3>"+premiumEscape(p.name)+"</h3><div style='font-size:24px;font-weight:900;color:#059669;margin:8px 0'>"+money(p.price)+"</div><strong>Package Benefits</strong><ul style='padding-left:20px;margin:8px 0'>"+benefits+"</ul><button type='button' class='full "+(enough?"":"gray")+"' "+(enough?"":"disabled")+" onclick=\"buyPremiumPackage('"+premiumEscape(p.id)+"',this)\">"+(enough?"Buy Now":"Insufficient Balance")+"</button></div>";
+    return "<div class='card' style='margin:0;padding:10px;border:1px solid #d8b66b'><h3 style='margin:0 0 4px'>"+premiumEscape(p.name)+"</h3><div style='font-size:21px;font-weight:900;color:#059669;margin:3px 0'>"+money(p.price)+"</div><strong>Package Benefits</strong><ul style='padding-left:20px;margin:4px 0'>"+benefits+"</ul><button type='button' class='full "+(enough?"":"gray")+"' "+(enough?"":"disabled")+" onclick=\"buyPremiumPackage('"+premiumEscape(p.id)+"',this)\">"+(enough?"Buy Now":"Insufficient Balance")+"</button></div>";
    }).join("")||"<p class='muted'>No premium packages are available right now.</p>";
   }
   const balanceNote=$("premiumBalanceNote");
