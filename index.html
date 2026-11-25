@@ -608,7 +608,7 @@ body.chat-open .chat-scroll{min-height:0;overscroll-behavior:contain}
   <div class="stats">
    <div class="stat"><div class="stat-icon">💰</div><div class="stat-label">Wallet Balance</div><strong id="homeBalance" class="green"></strong><button class="green-btn" onclick="openPage('wallet')">View Wallet</button></div>
    <div class="stat"><div class="stat-icon">⭐</div><div class="stat-label">Credit Score</div><strong id="homeCredit" class="purple">-</strong><button onclick="toggleProfile()">View Profile</button></div>
-   <div class="stat"><div class="stat-icon">📦</div><div class="stat-label">My Products</div><strong id="homeProducts"></strong><button onclick="openPage('products')">View Products</button></div>
+   <div class="stat"><div class="stat-icon">💎</div><div class="stat-label">Premium Packages</div><strong id="homeProducts">Explore</strong><button onclick="openPage('premium')">View Packages</button></div>
    <div class="stat"><div class="stat-icon">💵</div><div class="stat-label">Total Profit</div><strong id="homeProfit" class="purple"></strong><button onclick="openPage('wallet')">View Profit</button></div>
    <div class="stat"><div class="stat-icon">🎧</div><div class="stat-label">Customer Service</div><strong class="blue">Support</strong><small id="customerMessagesBadge" class="hidden" style="display:inline-block;margin:7px auto 0;padding:5px 10px;border-radius:14px;background:#e11d48;color:#fff;font-size:12px;font-weight:700"></small><button onclick="openPage('support')">Open Customer Service</button></div>
   </div>
@@ -669,11 +669,26 @@ body.chat-open .chat-scroll{min-height:0;overscroll-behavior:contain}
   </div>
  </section>
 
+ <section id="premiumPage" class="page hidden">
+  <div class="page-title"><h2>Premium Packages</h2><p class="muted">Choose a package using your available wallet balance.</p></div>
+  <div class="card" id="myPremiumDetailsCard">
+   <h3>My Premium</h3>
+   <div id="myPremiumSummary">Loading your package history...</div>
+  </div>
+  <div id="premiumPackagesList"></div>
+  <button class="full gray" onclick="openPage('home')">Back to Dashboard</button>
+ </section>
+
  <section id="walletPage" class="page hidden">
 
   <div class="stat">Available Balance<strong id="walletBalance" class="green"></strong></div>
   <div class="stat">Total Profit<strong id="walletProfit" class="purple"></strong></div>
   <div class="stat">Applied Balance<strong id="walletApplied" class="blue">$0.00</strong></div>
+  <div class="card" id="walletPremiumCard" style="margin:12px 0">
+   <h3>💎 My Premium</h3>
+   <div id="walletPremiumSummary">No package purchased yet.</div>
+   <button type="button" class="full" onclick="openPage('premium')">View My Premium</button>
+  </div>
   <p class="muted">Applied Balance shows only picked-up orders that are not complete.</p>
   <p id="walletMessage" class="message"></p>
   <div class="card">
@@ -1017,17 +1032,18 @@ window.openCompanyDetails=function(name){
 };
 
 window.openPage=function(page,skipDataLoad=false){
- if(currentUser&&["home","products","orders","wallet","support","profile","about"].includes(page)){
+ if(currentUser&&["home","products","orders","wallet","premium","support","profile","about"].includes(page)){
   localStorage.setItem("smartSeller_lastPage_"+currentUser.id,page);
  }
  document.body.classList.toggle("chat-open",page==="support");
- ["home","products","orders","wallet","support","profile","about"].forEach(p=>$(p+"Page").classList.toggle("hidden",p!==page));
+ ["home","products","orders","wallet","premium","support","profile","about"].forEach(p=>$(p+"Page").classList.toggle("hidden",p!==page));
  document.querySelectorAll(".bottom-nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===page));
  if(!skipDataLoad){
   if(page==="home")loadHomeData();
   if(page==="products")showProductTab("shop");
   if(page==="orders"){loadOrders();}
-  if(page==="wallet"){loadWallet();loadWithdrawals();loadWithdrawalStatus();resetWithdrawScreen()}
+  if(page==="wallet"){loadWallet();loadWithdrawals();loadWithdrawalStatus();loadPremiumSummary();resetWithdrawScreen()}
+  if(page==="premium")loadPremiumPage();
   if(page==="support"){markCustomerBadgeSeen("messages");loadSupport();}
   if(page==="profile"){loadProfile();loadKyc(currentUser);}
  }
@@ -1655,10 +1671,9 @@ async function loadHomeData(){
   new Promise((_,reject)=>setTimeout(()=>reject(new Error(label+" request timed out")),10000))
  ]);
  try{
-  const [ordersResult,productsResult]=await Promise.allSettled([
-   withTimeout(db.from("orders").select("*").eq("customer_id",userId).order("created_at",{ascending:false}),"Orders"),
-   withTimeout(db.from("customer_products").select("id").eq("customer_id",userId).is("ordered_at",null),"Products")
-  ]);
+  const ordersResult=await Promise.allSettled([
+   withTimeout(db.from("orders").select("*").eq("customer_id",userId).order("created_at",{ascending:false}),"Orders")
+  ]).then(results=>results[0]);
   if(!currentUser||currentUser.id!==userId)return;
   if(ordersResult.status==="fulfilled"&&!ordersResult.value.error){
    cachedOrders=ordersResult.value.data||[];
@@ -1668,24 +1683,98 @@ async function loadHomeData(){
    if($("homeOrders"))$("homeOrders").textContent="Unavailable";
    console.error("Dashboard orders:",ordersResult.status==="rejected"?ordersResult.reason:ordersResult.value.error);
   }
-  if(productsResult.status==="fulfilled"&&!productsResult.value.error){
-   $("homeProducts").textContent=(productsResult.value.data||[]).length;
-  }else{
-   $("homeProducts").textContent="Unavailable";
-   console.error("Dashboard products:",productsResult.status==="rejected"?productsResult.reason:productsResult.value.error);
-  }
   try{await loadWallet()}catch(walletError){console.error("Dashboard wallet:",walletError)}
+  try{await loadPremiumSummary()}catch(premiumError){console.error("Premium summary:",premiumError)}
  }catch(err){
   console.error("Dashboard loading error:",err);
  }finally{
   if(currentUser&&currentUser.id===userId){
-   ["homeOrders","homeProducts","homeBalance","homeProfit"].forEach(id=>{
+   ["homeOrders","homeBalance","homeProfit"].forEach(id=>{
     const el=$(id);if(el&&el.textContent==="")el.textContent="Unavailable";
    });
   }
  }
 }
 
+function premiumEscape(value){
+ return String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+}
+async function loadPremiumSummary(){
+ if(!currentUser)return;
+ const walletBox=$("walletPremiumSummary"),homeBox=$("homeProducts");
+ try{
+  const {data,error}=await db.from("premium_purchases").select("id,package_name,package_price,status,created_at,admin_note").eq("customer_id",currentUser.id).order("created_at",{ascending:false}).limit(1).maybeSingle();
+  if(error)throw error;
+  if(!data){
+   if(walletBox)walletBox.innerHTML="<p class='muted'>No package purchased yet.</p>";
+   if(homeBox)homeBox.textContent="Explore";
+   return;
+  }
+  const status=String(data.status||"pending").toLowerCase();
+  const label=status==="approved"?"Active":status==="rejected"?"Rejected":"Pending";
+  const html="<strong>"+premiumEscape(data.package_name)+"</strong><p class='muted' style='margin:5px 0'>"+money(data.package_price)+" · "+label+"</p>"+(data.admin_note?"<p class='muted'>Admin note: "+premiumEscape(data.admin_note)+"</p>":"");
+  if(walletBox)walletBox.innerHTML=html;
+  if(homeBox)homeBox.textContent=data.package_name+" · "+label;
+ }catch(err){
+  if(walletBox)walletBox.textContent="Premium details unavailable.";
+  if(homeBox)homeBox.textContent="View Packages";
+  console.error("Premium summary load:",err.message);
+ }
+}
+window.loadPremiumPage=async function(){
+ if(!currentUser)return;
+ const list=$("premiumPackagesList"),history=$("myPremiumSummary");
+ if(list)list.innerHTML="<p class='muted'>Loading packages...</p>";
+ if(history)history.textContent="Loading your package history...";
+ try{
+  const [packagesResult,purchasesResult,balanceResult]=await Promise.all([
+   db.from("premium_packages").select("id,slug,name,price,benefits").eq("is_active",true).order("price",{ascending:true}),
+   db.from("premium_purchases").select("id,package_name,package_price,status,created_at,admin_note").eq("customer_id",currentUser.id).order("created_at",{ascending:false}),
+   getWalletSummary()
+  ]);
+  if(packagesResult.error)throw packagesResult.error;
+  if(purchasesResult.error)throw purchasesResult.error;
+  const purchases=purchasesResult.data||[];
+  if(history){
+   history.innerHTML=purchases.length?purchases.map(p=>{
+    const st=String(p.status||"pending").toLowerCase(),shown=st==="approved"?"Active":st==="rejected"?"Rejected":"Pending";
+    return "<div class='card' style='margin:8px 0;padding:12px'><strong>"+premiumEscape(p.package_name)+"</strong><div>"+money(p.package_price)+" · <b>"+shown+"</b></div><small class='muted'>"+(p.created_at?new Date(p.created_at).toLocaleString():"")+"</small>"+(p.admin_note?"<p class='muted'>Admin note: "+premiumEscape(p.admin_note)+"</p>":"")+"</div>";
+   }).join(""):"<p class='muted'>No package purchased yet.</p>";
+  }
+  if(list){
+   list.innerHTML=(packagesResult.data||[]).map(p=>{
+    const benefits=(p.benefits||[]).map(x=>"<li>"+premiumEscape(x)+"</li>").join("");
+    const enough=Number(balanceResult.available)>=Number(p.price);
+    return "<div class='card' style='margin:12px 0;border:1px solid #d8b66b'><h3>"+premiumEscape(p.name)+"</h3><div style='font-size:24px;font-weight:800;color:#14243d;margin:8px 0'>"+money(p.price)+"</div><strong>Package Benefits</strong><ul style='padding-left:20px;margin:8px 0'>"+benefits+"</ul><button type='button' class='full "+(enough?"":"gray")+"' "+(enough?"":"disabled")+" onclick=\"buyPremiumPackage('"+premiumEscape(p.id)+"',this)\">"+(enough?"Buy Now":"Insufficient Balance")+"</button></div>";
+   }).join("")||"<p class='muted'>No premium packages are available right now.</p>";
+  }
+  const balanceNote=$("premiumBalanceNote");
+  if(balanceNote)balanceNote.textContent="Available Wallet Balance: "+money(balanceResult.available);
+  await loadPremiumSummary();
+ }catch(err){
+  if(list)list.textContent="Premium packages error: "+err.message;
+  if(history)history.textContent="Premium history error: "+err.message;
+  console.error("Premium page:",err);
+ }
+};
+window.buyPremiumPackage=async function(packageId,button){
+ if(!currentUser||!button)return;
+ button.disabled=true;const oldText=button.textContent;button.textContent="Processing...";
+ try{
+  const {data,error}=await db.rpc("purchase_premium_package",{p_package_id:packageId});
+  if(error)throw error;
+  const result=Array.isArray(data)?data[0]:data;
+  alert((result?.package_name||"Premium package")+" purchase submitted. Status: Pending. Amount deducted: "+money(result?.amount));
+  await loadWallet();
+  await loadPremiumPage();
+  await loadPremiumSummary();
+ }catch(err){
+  const message=String(err?.message||err);
+  if(message.toLowerCase().includes("insufficient balance"))alert("INSUFFICIENT BALANCE. Please add balance to your wallet before buying this package.");
+  else alert("Premium purchase error: "+message);
+  button.disabled=false;button.textContent=oldText;
+ }
+};
 async function loadKyc(user){
  if(!user)return;
  try{
