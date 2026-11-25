@@ -585,8 +585,10 @@ async function go(page,btn){
 
 /* DASHBOARD */
 async function dashboard(version){
+ const {data:{user:adminUser}}=await db.auth.getUser();
+ const adminName=String(adminUser?.user_metadata?.full_name||adminUser?.user_metadata?.name||adminUser?.email||"Admin").trim();
  const tables=[["profiles","Customers","customers"],["products","Products","products"],["orders","Orders","orders"],["withdrawals","Withdrawals","withdrawals"],["kyc_submissions","KYC Requests","kyc_submissions"],["support_chat_messages","Messages","support_messages"]];
- let html="<div class='dashboard-page'><h2>Dashboard</h2><div class='cards'>";
+ let html="<div class='dashboard-page'><h2>Welcome, Dear Smart Seller Admin</h2><p style='color:#fff;text-align:center;font-size:18px;font-weight:600;margin:-12px 0 22px;text-shadow:0 2px 8px #0008'>"+esc(adminName)+"</p><div class='cards'>";
  for(const [table,name,page] of tables){
   let displayCount=0,error=false;
   if(table==="profiles"){
