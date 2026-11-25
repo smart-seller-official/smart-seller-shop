@@ -184,6 +184,7 @@ body.admin-chat-open .chat-composer button{display:inline-flex!important;visibil
 <button onclick="go('customer_products',this)">▤ Customer Products</button>
 <button onclick="go('orders',this)">🛒 Orders <small id="adminOrdersBadge" class="admin-nav-count"></small></button>
 <button onclick="go('wallet_transactions',this)">▣ Wallet</button>
+<button onclick="go('premium_purchases',this)">💎 Premium Packages <small id="adminPremiumBadge" class="admin-nav-count"></small></button>
 <button onclick="go('withdrawals',this)">⇧ Withdrawals <small id="adminWithdrawalsBadge" class="admin-nav-count"></small></button>
 <button onclick="go('kyc_submissions',this)">✓ KYC <small id="adminKycBadge" class="admin-nav-count"></small></button>
 <button onclick="go('customers',this)">♙ Customer Accounts <small id="adminCustomersBadge" class="admin-nav-count"></small></button>
@@ -307,9 +308,10 @@ async function refreshAdminBadges(){
    db.from("profiles").select("id"),
    db.from("admin_notifications").select("id",{count:"exact",head:true}).eq("is_read",false).in("source_table",["withdrawals","kyc_submissions","support_chat_messages","support_messages"]),
    db.from("admin_notifications").select("id").eq("is_read",false).in("source_table",["withdrawals","kyc_submissions","support_chat_messages","support_messages"]).order("created_at",{ascending:false}).limit(100),
-   db.from("admin_notifications").select("id",{count:"exact",head:true}).eq("is_read",false).eq("source_table","customer_first_login")
+   db.from("admin_notifications").select("id",{count:"exact",head:true}).eq("is_read",false).eq("source_table","customer_first_login"),
+   db.from("premium_purchases").select("id,status").eq("status","pending")
   ]);
-  if(results[0].error)throw results[0].error;if(results[1].error)throw results[1].error;if(results[2].error)throw results[2].error;if(results[3].error)throw results[3].error;if(results[4].error)throw results[4].error;if(results[5].error)throw results[5].error;if(results[6].error)throw results[6].error;if(results[7].error)throw results[7].error;
+  if(results[0].error)throw results[0].error;if(results[1].error)throw results[1].error;if(results[2].error)throw results[2].error;if(results[3].error)throw results[3].error;if(results[4].error)throw results[4].error;if(results[5].error)throw results[5].error;if(results[6].error)throw results[6].error;if(results[7].error)throw results[7].error;if(results[8].error)throw results[8].error;
   const notificationIds=(results[6].data||[]).map(n=>String(n.id));
   if(adminKnownNotificationIds===null)adminKnownNotificationIds=new Set(notificationIds);
   else{
@@ -325,7 +327,7 @@ async function refreshAdminBadges(){
   const kycPending=(results[2].data||[]).filter(x=>String(x.status||"").trim().toLowerCase()==="pending").length;
   const withdrawalsPending=(results[3].data||[]).filter(x=>String(x.status||"").trim().toLowerCase()==="pending").length;
   const newCustomerCount=Number(results[7].count||0);
-  const ob=document.getElementById("adminOrdersBadge"),mb=document.getElementById("adminMessagesBadge"),kb=document.getElementById("adminKycBadge"),wb=document.getElementById("adminWithdrawalsBadge"),cb=document.getElementById("adminCustomersBadge"),nb=document.getElementById("adminNotificationsBadge");
+  const ob=document.getElementById("adminOrdersBadge"),mb=document.getElementById("adminMessagesBadge"),kb=document.getElementById("adminKycBadge"),wb=document.getElementById("adminWithdrawalsBadge"),cb=document.getElementById("adminCustomersBadge"),nb=document.getElementById("adminNotificationsBadge"),pb=document.getElementById("adminPremiumBadge");
   if(ob){ob.textContent="";ob.style.display="none";}
   if(mb){mb.textContent=waiting?String(waiting):"";mb.style.display=waiting?"inline-block":"none";}
   if(kb){kb.textContent=kycPending?String(kycPending):"";kb.style.display=kycPending?"inline-block":"none";}
@@ -333,19 +335,20 @@ async function refreshAdminBadges(){
   if(cb){cb.textContent=newCustomerCount?String(newCustomerCount):"";cb.style.display=newCustomerCount?"inline-block":"none";}
   const unreadNotifications=Number(results[5].count||0);
   if(nb){nb.textContent=unreadNotifications?String(unreadNotifications):"";nb.style.display=unreadNotifications?"inline-block":"none";}
+  const premiumPending=(results[8].data||[]).length;if(pb){pb.textContent=premiumPending?String(premiumPending):"";pb.style.display=premiumPending?"inline-block":"none";}
  }catch(e){console.warn("Admin notification counts:",e.message)}
 }
 
 async function start(){
  document.getElementById("login").style.display="none";
  document.getElementById("layout").style.display="flex";
- const allowedAdminPages=["dashboard","products","customer_products","orders","wallet_transactions","withdrawals","kyc_submissions","customers","support_messages","notifications","credit_score_history"];
+ const allowedAdminPages=["dashboard","products","customer_products","orders","wallet_transactions","premium_purchases","withdrawals","kyc_submissions","customers","support_messages","notifications","credit_score_history"];
  let savedAdminPage="dashboard";
  try{const saved=localStorage.getItem("smartSellerAdminLastPage");if(allowedAdminPages.includes(saved))savedAdminPage=saved;}catch(e){}
  const savedButton=[...document.querySelectorAll("aside button")].find(b=>(b.getAttribute("onclick")||"").includes("'"+savedAdminPage+"'"));
  await go(savedAdminPage,savedButton||document.querySelector("aside button"));
  await refreshAdminBadges();
- if(!window.adminBadgeTimer)window.adminBadgeTimer=setInterval(()=>{refreshAdminBadges();if(current==="dashboard")dashboard();if(current==="kyc_submissions")kycPage();if(current==="withdrawals")withdrawalsPage();if(current==="customers")customersPage();if(current==="customer_products"||current==="orders")refreshCustomerProducts();if(current==="orders")refreshOrderPickupNotifications();if(current==="notifications")notificationsPage();},5000);
+ if(!window.adminBadgeTimer)window.adminBadgeTimer=setInterval(()=>{refreshAdminBadges();if(current==="dashboard")dashboard();if(current==="premium_purchases")premiumPurchasesPage();if(current==="kyc_submissions")kycPage();if(current==="withdrawals")withdrawalsPage();if(current==="customers")customersPage();if(current==="customer_products"||current==="orders")refreshCustomerProducts();if(current==="orders")refreshOrderPickupNotifications();if(current==="notifications")notificationsPage();},5000);
 }
 async function check(){
  if(!db)return;
@@ -581,6 +584,7 @@ async function go(page,btn){
   if(page==="customer_products")return await customerProductsPage(version);
   if(page==="orders")return await ordersPage(version);
   if(page==="wallet_transactions")return await walletPage(version);
+  if(page==="premium_purchases")return await premiumPurchasesPage(version);
   if(page==="withdrawals")return await withdrawalsPage(version);
   if(page==="kyc_submissions")return await kycPage(version);
   if(page==="customers")return await customersPage(version);
@@ -1104,6 +1108,56 @@ async function walletHistory(){
   list.innerHTML=renderSimple(wr.data||[]);
  }catch(e){if(pageIs("wallet_transactions",version))note("Wallet load error: "+e.message,true)}
 }
+
+/* PREMIUM PACKAGE PURCHASE APPROVALS */
+async function premiumPurchasesPage(version=pageVersion){
+ const r=await db.from("premium_purchases").select("*").order("created_at",{ascending:false}).limit(1000);
+ if(r.error)throw r.error;
+ if(!pageIs("premium_purchases",version))return;
+ const rows=r.data||[];
+ const ids=[...new Set(rows.map(x=>String(x.customer_id||"")).filter(Boolean))];
+ let profiles=[];
+ if(ids.length){
+  const pr=await db.from("profiles").select("id,full_name,email").in("id",ids);
+  if(pr.error)throw pr.error;
+  profiles=pr.data||[];
+ }
+ const byId=new Map(profiles.map(p=>[String(p.id),p]));
+ const pending=rows.filter(x=>String(x.status||"").toLowerCase()==="pending").length;
+ putContent(`<h2>Premium Package Purchases</h2>
+ <p class="muted">Review customer package purchases. Rejecting a pending request automatically refunds its package amount to the customer's wallet.</p>
+ <div class="panel"><strong>Pending Requests: ${pending}</strong> <button class="gray" onclick="premiumPurchasesPage()">Refresh</button></div>
+ <div id="premiumPurchaseRows"></div>`,"premium_purchases",version);
+ const box=document.getElementById("premiumPurchaseRows");if(!box)return;
+ box.innerHTML=rows.map(x=>{
+  const customer=byId.get(String(x.customer_id))||{};
+  const status=String(x.status||"pending").toLowerCase();
+  const statusLabel=status==="approved"?"Active":status==="rejected"?"Rejected":"Pending";
+  return `<div class="panel" style="margin:10px 0">
+   <h3>${esc(x.package_name||"Premium Package")} — ${money(x.package_price)}</h3>
+   <p><b>Customer:</b> ${esc(customer.full_name||"Customer")}</p>
+   <p><b>Email:</b> ${esc(customer.email||"Not available")}</p>
+   <p><b>Date:</b> ${esc(x.created_at||"")}</p>
+   <p><b>Status:</b> <strong>${statusLabel}</strong></p>
+   ${x.admin_note?`<p><b>Admin Note:</b> ${esc(x.admin_note)}</p>`:""}
+   ${status==="pending"?`<button class="green" onclick="processPremiumPurchase('${esc(x.id)}','approved')">Approve</button> <button class="red" onclick="processPremiumPurchase('${esc(x.id)}','rejected')">Reject & Refund</button>`:""}
+  </div>`;
+ }).join("")||"<p class='muted'>No premium package purchases yet.</p>";
+}
+async function processPremiumPurchase(id,decision){
+ if(!["approved","rejected"].includes(decision))return;
+ const action=decision==="approved"?"approve this premium package":"reject this package and refund the customer";
+ if(!confirm("Are you sure you want to "+action+"?"))return;
+ const adminNote=prompt("Admin note (optional):","");if(adminNote===null)return;
+ try{
+  const {data,error}=await db.rpc("process_premium_purchase",{p_purchase_id:id,p_decision:decision,p_admin_note:adminNote});
+  if(error)throw error;
+  note(decision==="approved"?"Premium package approved and activated.":"Package rejected. Customer wallet refund completed.");
+  await premiumPurchasesPage();
+  await refreshAdminBadges();
+ }catch(e){note("Premium package update error: "+e.message,true)}
+}
+window.processPremiumPurchase=processPremiumPurchase;
 
 /* WITHDRAWALS */
 async function withdrawalsPage(version=pageVersion){
