@@ -1704,18 +1704,31 @@ async function loadPremiumSummary(){
  if(!currentUser)return;
  const walletBox=$("walletPremiumSummary"),homeBox=$("homeProducts");
  try{
-  const {data,error}=await db.from("premium_purchases").select("id,package_name,package_price,status,created_at,admin_note").eq("customer_id",currentUser.id).order("created_at",{ascending:false}).limit(1).maybeSingle();
+  const {data,error}=await db.from("premium_purchases").select("id,package_id,package_name,package_price,status,created_at,admin_note").eq("customer_id",currentUser.id).order("created_at",{ascending:false}).limit(100);
   if(error)throw error;
-  if(!data){
+  const purchases=data||[];
+  if(!purchases.length){
    if(walletBox)walletBox.innerHTML="<p class='muted'>No package purchased yet.</p>";
    if(homeBox)homeBox.textContent="Explore";
    return;
   }
-  const status=String(data.status||"pending").toLowerCase();
-  const label=status==="approved"?"Active":status==="rejected"?"Rejected":"Pending";
-  const html="<strong>"+premiumEscape(data.package_name)+"</strong><p class='muted' style='margin:5px 0'>"+money(data.package_price)+" · "+label+"</p>"+(data.admin_note?"<p class='muted'>Admin note: "+premiumEscape(data.admin_note)+"</p>":"");
+  const packageIds=[...new Set(purchases.map(p=>String(p.package_id||"")).filter(Boolean))];
+  let packageMap=new Map();
+  if(packageIds.length){
+   const packages=await db.from("premium_packages").select("id,name,benefits").in("id",packageIds);
+   if(packages.error)throw packages.error;
+   packageMap=new Map((packages.data||[]).map(p=>[String(p.id),p]));
+  }
+  const html=purchases.map(p=>{
+   const pkg=packageMap.get(String(p.package_id||""));
+   const status=String(p.status||"pending").toLowerCase();
+   const label=status==="approved"?"Active":status==="rejected"?"Rejected":"Pending";
+   const benefits=(pkg?.benefits||[]).map(item=>"<li>"+premiumEscape(item)+"</li>").join("");
+   return "<div class='card' style='margin:8px 0;padding:12px'><strong>"+premiumEscape(pkg?.name||p.package_name||"Premium Package")+"</strong><p class='muted' style='margin:5px 0'>"+money(p.package_price)+" · "+label+"</p>"+(p.created_at?"<small class='muted'>Purchased: "+premiumEscape(new Date(p.created_at).toLocaleString())+"</small>":"")+(benefits?"<div style='margin-top:9px'><b>Package Benefits</b><ul style='padding-left:20px;margin:6px 0'>"+benefits+"</ul></div>":"")+(p.admin_note?"<p class='muted'>Admin note: "+premiumEscape(p.admin_note)+"</p>":"")+"</div>";
+  }).join("");
   if(walletBox)walletBox.innerHTML=html;
-  if(homeBox)homeBox.textContent=data.package_name+" · "+label;
+  const latest=purchases[0],latestStatus=String(latest.status||"pending").toLowerCase(),latestLabel=latestStatus==="approved"?"Active":latestStatus==="rejected"?"Rejected":"Pending";
+  if(homeBox)homeBox.textContent=(latest.package_name||"Premium Package")+" · "+latestLabel;
  }catch(err){
   if(walletBox)walletBox.textContent="Premium details unavailable.";
   if(homeBox)homeBox.textContent="View Packages";
