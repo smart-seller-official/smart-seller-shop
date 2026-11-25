@@ -820,16 +820,23 @@ async function refreshOrderPickupNotifications(){
   const or=orderIds.length?await db.from("orders").select("id,customer_id,status").in("id",orderIds):{data:[],error:null};
   if(or.error)throw or.error;
   const orderMap=new Map((or.data||[]).map(o=>[String(o.id),o]));
-  box.innerHTML=notifications.map(n=>{
+  // Show only orders currently marked PICKED, one notification per order.
+  const pickedNotifications=[],seenOrderIds=new Set();
+  for(const n of notifications){
+   const oid=String(n.source_id||""),order=orderMap.get(oid);
+   if(!order||String(order.status||"").toLowerCase().trim()!=="picked"||seenOrderIds.has(oid))continue;
+   seenOrderIds.add(oid);pickedNotifications.push(n);
+  }
+  if(!pickedNotifications.length){box.innerHTML='<p class="muted">No customer pickup notifications.</p>';return}
+  box.innerHTML=pickedNotifications.map(n=>{
    const order=orderMap.get(String(n.source_id||""));
-   const customerId=order?.customer_id||n.customer_id;
+   const customerId=order.customer_id||n.customer_id;
    const name=customerName(customerId),email=customerEmail(customerId);
-   const status=String(order?.status||"").toLowerCase();
    return `<div class="customer" style="padding:10px;margin:7px 0">
     <strong>🔔 Customer picked up an order</strong>
     <p style="margin:5px 0">${esc(name)} ${email?"— "+esc(email):""}</p>
-    <div class="muted">Order ID: ${esc(n.source_id||"—")} · Status: ${esc(order?.status||"Not found")} · ${esc(n.created_at?new Date(n.created_at).toLocaleString():"")}</div>
-    ${order?(status==="picked"?`<button class="green" onclick="setPickupOrderProcessing('${esc(n.id)}','${esc(order.id)}')">Change Status to Processing</button>`:'<span class="muted">Order status has already been updated.</span>'):'<span class="muted">Order record not found.</span>'}
+    <div class="muted">Order ID: ${esc(n.source_id||"—")} · Status: PICKED · ${esc(n.created_at?new Date(n.created_at).toLocaleString():"")}</div>
+    <button class="green" onclick="setPickupOrderProcessing('${esc(n.id)}','${esc(order.id)}')">Change Status to Processing</button>
    </div>`;
   }).join("");
  }catch(e){console.error("Order pickup notifications:",e);box.innerHTML='<p class="error">Pickup notifications load error: '+esc(e.message)+'</p>'}
