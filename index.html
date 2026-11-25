@@ -1708,7 +1708,7 @@ async function loadPremiumSummary(){
   if(error)throw error;
   const purchases=data||[];
   if(!purchases.length){
-   if(walletBox)walletBox.innerHTML="<p class='muted'>No package purchased yet.</p>";
+   if(walletBox)walletBox.innerHTML="";
    if(homeBox)homeBox.textContent="Explore";
    return;
   }
