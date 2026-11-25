@@ -1729,7 +1729,8 @@ async function loadPremiumSummary(){
    const pkg=packageMap.get(String(p.package_id||""));
    const status=String(p.status||"pending").toLowerCase();
    const label=status==="approved"?"Active":status==="rejected"?"Rejected":"Pending";
-   const benefits=(pkg?.benefits||[]).map(item=>"<li>"+premiumEscape(item)+"</li>").join("");
+   const cashback=Math.round(Number(p.package_price||0)*0.15*100)/100;
+   const benefits=(pkg?.benefits||[]).map(item=>"<li>"+premiumEscape(item)+"</li>").concat("<li>Cashback bonus: "+money(cashback)+"</li>").join("");
    return "<div class='card' style='margin:8px 0;padding:12px'><strong>"+premiumEscape(pkg?.name||p.package_name||"Premium Package")+"</strong><p class='muted' style='margin:5px 0'>"+money(p.package_price)+" · "+label+"</p>"+(p.created_at?"<small class='muted'>Purchased: "+premiumEscape(new Date(p.created_at).toLocaleString())+"</small>":"")+(benefits?"<div style='margin-top:9px'><b>Package Benefits</b><ul style='padding-left:20px;margin:6px 0'>"+benefits+"</ul></div>":"")+(p.admin_note?"<p class='muted'>Admin note: "+premiumEscape(p.admin_note)+"</p>":"")+"</div>";
   }).join("");
   if(walletBox)walletBox.innerHTML=html;
@@ -1763,7 +1764,8 @@ window.loadPremiumPage=async function(){
   }
   if(list){
    list.innerHTML=(packagesResult.data||[]).map(p=>{
-    const benefits=(p.benefits||[]).map(x=>"<li>"+premiumEscape(x)+"</li>").join("");
+    const cashback=Math.round(Number(p.price||0)*0.15*100)/100;
+     const benefits=(p.benefits||[]).map(x=>"<li>"+premiumEscape(x)+"</li>").concat("<li>Cashback bonus: "+money(cashback)+"</li>").join("");
     const enough=Number(balanceResult.available)>=Number(p.price);
     return "<div class='card' style='margin:12px 0;border:1px solid #d8b66b'><h3>"+premiumEscape(p.name)+"</h3><div style='font-size:24px;font-weight:900;color:#059669;margin:8px 0'>"+money(p.price)+"</div><strong>Package Benefits</strong><ul style='padding-left:20px;margin:8px 0'>"+benefits+"</ul><button type='button' class='full "+(enough?"":"gray")+"' "+(enough?"":"disabled")+" onclick=\"buyPremiumPackage('"+premiumEscape(p.id)+"',this)\">"+(enough?"Buy Now":"Insufficient Balance")+"</button></div>";
    }).join("")||"<p class='muted'>No premium packages are available right now.</p>";
