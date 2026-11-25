@@ -319,7 +319,7 @@ async function refreshAdminBadges(){
   const withdrawalsPending=(results[3].data||[]).filter(x=>String(x.status||"").trim().toLowerCase()==="pending").length;
   const newCustomerCount=Number(results[7].count||0);
   const ob=document.getElementById("adminOrdersBadge"),mb=document.getElementById("adminMessagesBadge"),kb=document.getElementById("adminKycBadge"),wb=document.getElementById("adminWithdrawalsBadge"),cb=document.getElementById("adminCustomersBadge"),nb=document.getElementById("adminNotificationsBadge");
-  if(ob)ob.textContent=pending?String(pending):"";
+  if(ob){ob.textContent="";ob.style.display="none";}
   if(mb){mb.textContent=waiting?String(waiting):"";mb.style.display=waiting?"inline-block":"none";}
   if(kb){kb.textContent=kycPending?String(kycPending):"";kb.style.display=kycPending?"inline-block":"none";}
   if(wb){wb.textContent=withdrawalsPending?String(withdrawalsPending):"";wb.style.display=withdrawalsPending?"inline-block":"none";}
