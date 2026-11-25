@@ -689,7 +689,7 @@ body.chat-open .chat-scroll{min-height:0;overscroll-behavior:contain}
    <button type="button" class="full gray" id="walletPremiumToggle" onclick="toggleWalletPremium()">💎 My Premium ▾</button>
    <div id="walletPremiumSummary" class="hidden" style="margin-top:10px"></div>
   </div>
-  <p class="muted">Applied Balance shows only picked-up orders that are not complete.</p>
+  <p class="muted">Applied Balance includes premium package purchases and picked-up orders that are not complete.</p>
   <p id="walletMessage" class="message"></p>
   <div class="card">
    <h3>Withdraw Money</h3>
@@ -1260,7 +1260,7 @@ async function getWalletSummary(){
   const amount=Math.abs(Number(t.amount)||0);
   if(!["approved","completed","success","successful","paid"].includes(status))return;
   if(type==="profit"){profit+=amount;available+=amount}
-  else if(type==="purchase"||type==="applied")available-=amount;
+  else if(type==="purchase"||type==="applied"){available-=amount;if(type==="purchase")applied+=amount;}
   else if(type==="refund")available+=amount;
   else if(type==="withdrawal"||type.includes("minus")||type.includes("debit")||type.includes("payment"))available-=amount;
   else if(type.includes("add_balance")||type==="credit"||type==="deposit"||type==="income"||type==="add balance")available+=amount;
