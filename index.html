@@ -670,7 +670,7 @@ body.chat-open .chat-scroll{min-height:0;overscroll-behavior:contain}
  </section>
 
  <section id="premiumPage" class="page hidden">
-  <div class="page-title"><h2>Premium Packages</h2><p class="muted">Choose a package using your available wallet balance.</p></div>
+  <div class="page-title"><h2>Premium Packages</h2><p class="muted" style="color:#059669!important;font-weight:800">Choose a package using your available wallet balance.</p></div>
   <div class="card" id="myPremiumDetailsCard">
    <h3>My Premium</h3>
    <div id="myPremiumSummary">Loading your package history...</div>
@@ -1758,7 +1758,7 @@ window.loadPremiumPage=async function(){
    list.innerHTML=(packagesResult.data||[]).map(p=>{
     const benefits=(p.benefits||[]).map(x=>"<li>"+premiumEscape(x)+"</li>").join("");
     const enough=Number(balanceResult.available)>=Number(p.price);
-    return "<div class='card' style='margin:12px 0;border:1px solid #d8b66b'><h3>"+premiumEscape(p.name)+"</h3><div style='font-size:24px;font-weight:800;color:#14243d;margin:8px 0'>"+money(p.price)+"</div><strong>Package Benefits</strong><ul style='padding-left:20px;margin:8px 0'>"+benefits+"</ul><button type='button' class='full "+(enough?"":"gray")+"' "+(enough?"":"disabled")+" onclick=\"buyPremiumPackage('"+premiumEscape(p.id)+"',this)\">"+(enough?"Buy Now":"Insufficient Balance")+"</button></div>";
+    return "<div class='card' style='margin:12px 0;border:1px solid #d8b66b'><h3>"+premiumEscape(p.name)+"</h3><div style='font-size:24px;font-weight:900;color:#059669;margin:8px 0'>"+money(p.price)+"</div><strong>Package Benefits</strong><ul style='padding-left:20px;margin:8px 0'>"+benefits+"</ul><button type='button' class='full "+(enough?"":"gray")+"' "+(enough?"":"disabled")+" onclick=\"buyPremiumPackage('"+premiumEscape(p.id)+"',this)\">"+(enough?"Buy Now":"Insufficient Balance")+"</button></div>";
    }).join("")||"<p class='muted'>No premium packages are available right now.</p>";
   }
   const balanceNote=$("premiumBalanceNote");
