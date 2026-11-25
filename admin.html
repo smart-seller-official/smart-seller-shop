@@ -619,7 +619,7 @@ async function dashboard(version){
   const action=table==="orders"?"openDashboardOrders()":"go('"+page+"')";
   html+='<div class="stat dashboard-stat" role="button" tabindex="0" onclick="'+action+'" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();'+action+'}">'+name+'<strong>'+(error?"Error":displayCount)+'</strong><span class="stat-hint">Click to open</span></div>';
  }
- html+="</div><section class='admin-welcome'><div class='admin-welcome-kicker'>SMART SELLER OFFICIAL</div><h1>Welcome, Dear Smart Seller Admin</h1><div class='admin-welcome-name'>Jacki</div><div class='admin-welcome-role'>Admin: <strong>Jacki</strong></div></section>";
+ html+="</div><section class='admin-welcome'><div class='admin-welcome-kicker'>SMART SELLER OFFICIAL</div><h1>Welcome, Dear Smart Seller</h1><h1>Admin Jacki</h1></section>";
  putContent(html+"</div>","dashboard",version);
 }
 
