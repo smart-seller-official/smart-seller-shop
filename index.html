@@ -684,13 +684,13 @@ body.chat-open .chat-scroll{min-height:0;overscroll-behavior:contain}
 
  <section id="walletPage" class="page hidden">
 
-  <div class="card" id="walletPremiumCard" style="margin:0 0 12px">
-   <button type="button" class="full gray" id="walletPremiumToggle" onclick="toggleWalletPremium()">💎 My Premium ▾</button>
-   <div id="walletPremiumSummary" class="hidden" style="margin-top:10px"></div>
-  </div>
   <div class="stat">Available Balance<strong id="walletBalance" class="green"></strong></div>
   <div class="stat">Total Profit<strong id="walletProfit" class="purple"></strong></div>
   <div class="stat">Applied Balance<strong id="walletApplied" class="blue">$0.00</strong></div>
+  <div class="card" id="walletPremiumCard" style="margin:12px 0">
+   <button type="button" class="full gray" id="walletPremiumToggle" onclick="toggleWalletPremium()">💎 My Premium ▾</button>
+   <div id="walletPremiumSummary" class="hidden" style="margin-top:10px"></div>
+  </div>
   <div class="card">
    <button type="button" class="full gray" id="walletWithdrawToggle" onclick="toggleWalletWithdraw()">💸 Withdraw Money ▾</button>
    <div id="walletWithdrawContent" class="hidden" style="margin-top:10px">
@@ -1773,7 +1773,7 @@ async function loadPremiumSummary(){
   }).join("");
   if(walletBox)walletBox.innerHTML=html;
   const latest=purchases[0],latestStatus=String(latest.status||"pending").toLowerCase(),latestLabel=latestStatus==="approved"?"Active":latestStatus==="rejected"?"Rejected":"Pending";
-  if(homeBox)homeBox.textContent=(latest.package_name||"Premium Package");
+  if(homeBox)homeBox.textContent=(latest.package_name||"Premium Package")+" · "+latestLabel;
  }catch(err){
   if(walletBox)walletBox.textContent="Premium details unavailable.";
   if(homeBox)homeBox.textContent="View Packages";
