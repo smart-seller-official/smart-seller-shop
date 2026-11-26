@@ -1142,15 +1142,11 @@ async function premiumPurchasesPage(version=pageVersion){
  const r=await db.from("premium_purchases").select("*").order("created_at",{ascending:false}).limit(1000);
  if(r.error)throw r.error;
  if(!pageIs("premium_purchases",version))return;
- const rows=r.data||[];
- const ids=[...new Set(rows.map(x=>String(x.customer_id||"")).filter(Boolean))];
- let profiles=[];
- if(ids.length){
-  const pr=await db.from("profiles").select("id,full_name,email").in("id",ids);
-  if(pr.error)throw pr.error;
-  profiles=pr.data||[];
- }
- const byId=new Map(profiles.map(p=>[String(p.id),p]));
+ await loadCustomers();
+ if(!pageIs("premium_purchases",version))return;
+ const activeCustomerIds=new Set(customers.map(c=>String(c.id)));
+ const rows=(r.data||[]).filter(x=>activeCustomerIds.has(String(x.customer_id||"")));
+ const byId=new Map(customers.map(p=>[String(p.id),p]));
  const pending=rows.filter(x=>String(x.status||"").toLowerCase()==="pending").length;
  const expandedIds=new Set([...document.querySelectorAll("#premiumPurchaseRows details[data-premium-id][open]")].map(el=>el.getAttribute("data-premium-id")));
  const premiumMonths=price=>({1000:6,2000:12,3000:18,5000:24,8000:30,10000:36}[Math.round(Number(price||0))]||0);
