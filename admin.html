@@ -831,6 +831,7 @@ function calculateWalletSummary(transactions,orders){
  (transactions||[]).forEach(t=>{
   const type=String(t.transaction_type||"").toLowerCase().trim(),status=String(t.status||"").toLowerCase().trim(),amount=Math.abs(Number(t.amount)||0);
   if(!["approved","completed","success","successful","paid"].includes(status))return;
+  if(String(t.description||"").toLowerCase().startsWith("premium package purchase:"))return;
   if(type==="profit"){profit+=amount;available+=amount}
   else if(type==="purchase"||type==="applied")available-=amount;
   else if(type==="refund")available+=amount;
@@ -1058,7 +1059,7 @@ async function loadOrders(){
  let items=[];
  if(allRows.length){const ir=await db.from("order_items").select("*").in("order_id",allRows.map(x=>x.id));if(ir.error){if(pageIs("orders",version))note("Order items load error: "+ir.error.message,true);return}items=ir.data||[]}
  if(!pageIs("orders",version))return;
- const walletResult=await db.from("wallet_transactions").select("customer_id,amount,transaction_type,status").limit(5000);
+ const walletResult=await db.from("wallet_transactions").select("customer_id,amount,transaction_type,status,description").limit(5000);
  if(!pageIs("orders",version))return;if(walletResult.error){note("Wallet balance load error: "+walletResult.error.message,true);return}
  const transactionsByCustomer={};(walletResult.data||[]).forEach(x=>{const cid=String(x.customer_id);(transactionsByCustomer[cid]??=[]).push(x)});
  const balanceByCustomer={};let totalCustomerAvailableBalance=0;
@@ -1158,7 +1159,7 @@ async function premiumPurchasesPage(version=pageVersion){
  };
  const displayDate=value=>value?(new Date(value).toLocaleString()):"Not available";
  putContent(`<h2>Premium Package Purchases</h2>
- <p class="muted">Review customer package purchases. Rejecting a pending request automatically refunds its package amount to the customer's wallet.</p>
+ <p class="muted">Review customer package purchases. Package purchases do not deduct from the customer's available wallet balance.</p>
  <div class="panel"><strong>Pending Requests: ${pending}</strong> <button class="gray" onclick="premiumPurchasesPage()">Refresh</button></div>
  <div id="premiumPurchaseRows"></div>`,"premium_purchases",version);
  const box=document.getElementById("premiumPurchaseRows");if(!box)return;
@@ -1187,7 +1188,7 @@ async function premiumPurchasesPage(version=pageVersion){
     <p><b>Active Date:</b> ${esc(activeDate?displayDate(activeDate):"Not active yet")}</p>
     <p><b>Expiry Date:</b> ${esc(expiryDate)}</p>
     ${x.admin_note?`<p><b>Admin Note:</b> ${esc(x.admin_note)}</p>`:""}
-    ${status==="pending"?`<button class="green" onclick="processPremiumPurchase('${esc(x.id)}','approved')">Approve</button> <button class="red" onclick="processPremiumPurchase('${esc(x.id)}','rejected')">Reject & Refund</button>`:""}
+    ${status==="pending"?`<button class="green" onclick="processPremiumPurchase('${esc(x.id)}','approved')">Approve</button> <button class="red" onclick="processPremiumPurchase('${esc(x.id)}','rejected')">Reject</button>`:""}
    </div>
   </details>`;
  }).join("")||"<p class='muted'>No premium package purchases yet.</p>";
@@ -1202,7 +1203,7 @@ async function processPremiumPurchase(id,decision){
  try{
   const {data,error}=await db.rpc("process_premium_purchase",{p_purchase_id:id,p_decision:decision,p_admin_note:adminNote});
   if(error)throw error;
-  note(decision==="approved"?"Premium package approved and activated.":"Package rejected. Customer wallet refund completed.");
+  note(decision==="approved"?"Premium package approved and activated.":"Package request rejected. No wallet deduction was made.");
   await premiumPurchasesPage();
   await refreshAdminBadges();
  }catch(e){note("Premium package update error: "+e.message,true)}
