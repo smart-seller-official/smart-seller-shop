@@ -1375,15 +1375,15 @@ async function customersPage(version=pageVersion){
  if(ordersResult.error)throw ordersResult.error;
  customerManagementOrders=ordersResult.data||[];
  customerManagementFilter="all";
- const countFor=status=>new Set(customerManagementOrders.filter(o=>status(o.status)).map(o=>String(o.customer_id||"")).filter(id=>activeCustomers.some(c=>String(c.id)===id))).size;
+ const countFor=statuses=>new Set(customerManagementOrders.filter(o=>statuses.includes(String(o.status||"").trim().toLowerCase())).map(o=>String(o.customer_id||"")).filter(id=>activeCustomers.some(c=>String(c.id)===id))).size;
  const html=`<h2>Customer Management</h2>
  <div class="cards customer-management-cards">
-  <button class="stat customer-management-stat" onclick="setCustomerManagementFilter('all')">All Active Customers<strong>${activeCustomers.length}</strong></button>
-  <button class="stat customer-management-stat" onclick="setCustomerManagementFilter('pending')">Pending Orders<strong>${countFor(s=>String(s||'').toLowerCase()==='pending')}</strong></button>
-  <button class="stat customer-management-stat" onclick="setCustomerManagementFilter('processing')">Processing Orders<strong>${countFor(s=>['processing','shipping'].includes(String(s||'').toLowerCase()))}</strong></button>
-  <button class="stat customer-management-stat" onclick="setCustomerManagementFilter('pickup')">Pickup Orders<strong>${countFor(s=>String(s||'').toLowerCase()==='pickup')}</strong></button>
-  <button class="stat customer-management-stat" onclick="setCustomerManagementFilter('completed')">Completed Orders<strong>${countFor(s=>String(s||'').toLowerCase()==='completed')}</strong></button>
-  <button class="stat customer-management-stat" onclick="setCustomerManagementFilter('recent')">Recently Added<strong>${Math.min(20,activeCustomers.length)}</strong></button>
+  <button type="button" class="stat customer-management-stat" onclick="setCustomerManagementFilter('all')">All Active Customers<strong>${activeCustomers.length}</strong></button>
+  <button type="button" class="stat customer-management-stat" onclick="setCustomerManagementFilter('pending')">Pending Orders<strong>${countFor(["pending"])}</strong></button>
+  <button type="button" class="stat customer-management-stat" onclick="setCustomerManagementFilter('processing')">Processing Orders<strong>${countFor(["processing","shipping"])}</strong></button>
+  <button type="button" class="stat customer-management-stat" onclick="setCustomerManagementFilter('pickup')">Pickup Orders<strong>${countFor(["picked","pickup"])}</strong></button>
+  <button type="button" class="stat customer-management-stat" onclick="setCustomerManagementFilter('completed')">Completed Orders<strong>${countFor(["completed"])}</strong></button>
+  <button type="button" class="stat customer-management-stat" onclick="setCustomerManagementFilter('recent')">Recently Added<strong>${Math.min(20,activeCustomers.length)}</strong></button>
  </div>
  <div class="panel customer-management-panel">
   <input id="customerSearch" placeholder="Search customer name, Gmail or phone..." oninput="filterCustomerAccounts()">
@@ -1405,7 +1405,7 @@ function renderCustomerAccounts(){
   const status=String(o.status||"").trim().toLowerCase();
   if(customerManagementFilter==="pending")return status==="pending";
   if(customerManagementFilter==="processing")return ["processing","shipping"].includes(status);
-  if(customerManagementFilter==="pickup")return status==="pickup";
+  if(customerManagementFilter==="pickup")return ["picked","pickup"].includes(status);
   if(customerManagementFilter==="completed")return status==="completed";
   return false;
  }).map(o=>String(o.customer_id||"")));
