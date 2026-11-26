@@ -1800,7 +1800,7 @@ window.loadPremiumPage=async function(){
      const activeDate=st==="approved"?(p.reviewed_at||p.created_at):null;
      const expiryDate=activeDate?premiumExpiryDate(activeDate,p.package_price):"";
      const dateDetails=st==="approved"?(activeDate?"<small class='muted' style='display:block'>Active Date: "+premiumEscape(new Date(activeDate).toLocaleDateString())+"</small>":"")+(expiryDate?"<small class='muted' style='display:block'>Expiry Date: "+premiumEscape(expiryDate)+"</small>":""):"";
-     return "<div class='card' style='margin:8px 0;padding:12px'><strong>"+premiumEscape(p.package_name)+"</strong><div>"+money(p.package_price)+" · <b>"+shown+"</b></div><small class='muted'>"+(p.created_at?new Date(p.created_at).toLocaleString():"")+"</small>"+dateDetails+(p.admin_note?"<p class='muted'>Admin note: "+premiumEscape(p.admin_note)+"</p>":"")+"</div>";
+     return "<div class='card' style='margin:8px 0;padding:12px'><strong>"+premiumEscape(p.package_name)+"</strong><div>"+money(p.package_price)+(st==="approved"?"":" · <b>"+shown+"</b>")+"</div><small class='muted'>"+(p.created_at?new Date(p.created_at).toLocaleString():"")+"</small>"+dateDetails+(p.admin_note?"<p class='muted'>Admin note: "+premiumEscape(p.admin_note)+"</p>":"")+"</div>";
    }).join(""):"<p class='muted'>No package purchased yet.</p>";
   }
   if(list){
