@@ -1146,37 +1146,52 @@ async function premiumPurchasesPage(version=pageVersion){
  }
  const byId=new Map(profiles.map(p=>[String(p.id),p]));
  const pending=rows.filter(x=>String(x.status||"").toLowerCase()==="pending").length;
+ const expandedIds=new Set([...document.querySelectorAll("#premiumPurchaseRows details[data-premium-id][open]")].map(el=>el.getAttribute("data-premium-id")));
+ const premiumMonths=price=>({1000:6,2000:12,3000:18,5000:24,8000:30,10000:36}[Math.round(Number(price||0))]||0);
+ const premiumExpiry=(activeDate,price)=>{
+  const months=premiumMonths(price);if(!activeDate||!months)return "Not available";
+  const d=new Date(activeDate);if(Number.isNaN(d.getTime()))return "Not available";
+  const month=d.getMonth()+months,year=d.getFullYear()+Math.floor(month/12),normalized=((month%12)+12)%12;
+  return new Date(year,normalized,Math.min(d.getDate(),new Date(year,normalized+1,0).getDate())).toLocaleString();
+ };
+ const displayDate=value=>value?(new Date(value).toLocaleString()):"Not available";
  putContent(`<h2>Premium Package Purchases</h2>
  <p class="muted">Review customer package purchases. Rejecting a pending request automatically refunds its package amount to the customer's wallet.</p>
  <div class="panel"><strong>Pending Requests: ${pending}</strong> <button class="gray" onclick="premiumPurchasesPage()">Refresh</button></div>
  <div id="premiumPurchaseRows"></div>`,"premium_purchases",version);
  const box=document.getElementById("premiumPurchaseRows");if(!box)return;
-  box.innerHTML=rows.map(x=>{
-   const customer=byId.get(String(x.customer_id))||{};
-   const status=String(x.status||"pending").toLowerCase();
-   const statusLabel=status==="approved"?"Active":status==="rejected"?"Rejected":"Pending";
-   return `<details class="panel" style="margin:8px 0;padding:8px">
-    <summary style="display:flex;align-items:center;gap:12px;flex-wrap:nowrap;white-space:nowrap;overflow-x:auto;cursor:pointer;list-style:none">
-     <strong>${esc(x.package_name||"Premium Package")}</strong>
-     <span>${esc(customer.full_name||"Customer")}</span>
-     <span>${esc(customer.email||"Not available")}</span>
-     <span>${money(x.package_price)}</span>
-     <strong>${statusLabel}</strong>
-     <b style="margin-left:auto">Details</b>
-    </summary>
-    <div style="padding:10px 4px 2px">
-     <p><b>Package:</b> ${esc(x.package_name||"Premium Package")}</p>
-     <p><b>Customer:</b> ${esc(customer.full_name||"Customer")}</p>
-     <p><b>Email:</b> ${esc(customer.email||"Not available")}</p>
-     <p><b>Price:</b> ${money(x.package_price)}</p>
-     <p><b>Date:</b> ${esc(x.created_at||"")}</p>
-     <p><b>Status:</b> <strong>${statusLabel}</strong></p>
-     ${x.admin_note?`<p><b>Admin Note:</b> ${esc(x.admin_note)}</p>`:""}
-     ${status==="pending"?`<button class="green" onclick="processPremiumPurchase('${esc(x.id)}','approved')">Approve</button> <button class="red" onclick="processPremiumPurchase('${esc(x.id)}','rejected')">Reject & Refund</button>`:""}
-    </div>
-   </details>`;
-  }).join("")||"<p class='muted'>No premium package purchases yet.</p>";
+ box.innerHTML=rows.map(x=>{
+  const customer=byId.get(String(x.customer_id))||{};
+  const status=String(x.status||"pending").toLowerCase();
+  const statusLabel=status==="approved"?"Active":status==="rejected"?"Rejected":"Pending";
+  const activeDate=status==="approved"?(x.reviewed_at||x.created_at):null;
+  const expiryDate=activeDate?premiumExpiry(activeDate,x.package_price):"Not active";
+  return `<details class="panel" data-premium-id="${esc(x.id)}" style="margin:8px 0;padding:8px">
+   <summary style="display:flex;align-items:center;gap:12px;flex-wrap:nowrap;white-space:nowrap;overflow-x:auto;cursor:pointer;list-style:none">
+    <strong>${esc(x.package_name||"Premium Package")}</strong>
+    <span>${esc(customer.full_name||"Customer")}</span>
+    <span>${esc(customer.email||"Not available")}</span>
+    <span>${money(x.package_price)}</span>
+    <strong>${statusLabel}</strong>
+    <b style="margin-left:auto">Details</b>
+   </summary>
+   <div style="padding:10px 4px 2px">
+    <p><b>Package:</b> ${esc(x.package_name||"Premium Package")}</p>
+    <p><b>Customer:</b> ${esc(customer.full_name||"Customer")}</p>
+    <p><b>Email:</b> ${esc(customer.email||"Not available")}</p>
+    <p><b>Price:</b> ${money(x.package_price)}</p>
+    <p><b>Purchase Date:</b> ${esc(displayDate(x.created_at))}</p>
+    <p><b>Status:</b> <strong>${statusLabel}</strong></p>
+    <p><b>Active Date:</b> ${esc(activeDate?displayDate(activeDate):"Not active yet")}</p>
+    <p><b>Expiry Date:</b> ${esc(expiryDate)}</p>
+    ${x.admin_note?`<p><b>Admin Note:</b> ${esc(x.admin_note)}</p>`:""}
+    ${status==="pending"?`<button class="green" onclick="processPremiumPurchase('${esc(x.id)}','approved')">Approve</button> <button class="red" onclick="processPremiumPurchase('${esc(x.id)}','rejected')">Reject & Refund</button>`:""}
+   </div>
+  </details>`;
+ }).join("")||"<p class='muted'>No premium package purchases yet.</p>";
+ expandedIds.forEach(id=>{const el=box.querySelector('details[data-premium-id="'+CSS.escape(id)+'"]');if(el)el.open=true;});
 }
+
 async function processPremiumPurchase(id,decision){
  if(!["approved","rejected"].includes(decision))return;
  const action=decision==="approved"?"approve this premium package":"reject this package and refund the customer";
