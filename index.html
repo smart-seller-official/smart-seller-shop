@@ -1265,7 +1265,7 @@ async function getWalletSummary(){
   if(!["approved","completed","success","successful","paid"].includes(status))return;
   if(String(t.description||"").toLowerCase().startsWith("premium package purchase:"))return;
   if(type==="profit"){profit+=amount;available+=amount}
-  else if(type==="purchase"||type==="applied"){available-=amount;if(type==="purchase")applied+=amount;}
+  else if(type==="purchase"||type==="applied"){available-=amount;}
   else if(type==="refund")available+=amount;
   else if(type==="withdrawal"||type.includes("minus")||type.includes("debit")||type.includes("payment"))available-=amount;
   else if(type.includes("add_balance")||type==="credit"||type==="deposit"||type==="income"||type==="add balance")available+=amount;
