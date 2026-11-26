@@ -600,10 +600,12 @@ body.chat-open .chat-scroll{min-height:0;overscroll-behavior:contain}
 <div id="dashboard" class="hidden">
  <section id="homePage" class="page">
   <div class="page-title" style="text-align:center;background:linear-gradient(125deg,#10243d 0%,#1d3d60 72%,#294d70 100%);color:#fff;border:1px solid #c9a85f;border-radius:18px;padding:18px;margin:0 0 16px;box-shadow:0 10px 25px rgba(16,36,61,.18)"><h2 style="color:#fff;margin:0">Dashboard</h2></div>
-  <div id="installAppCard" class="card" style="text-align:center;border:1px solid #d8b66b">
-   <h3 style="margin:0 0 6px">Install Smart Seller</h3>
-   <p class="muted" style="margin:0 0 10px">Install the app on your device for quick access.</p>
-   <button id="installAppButton" type="button" class="full">⬇ Install App</button>
+  <div id="installAppCard" class="card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;border:1px solid #d8b66b;padding:10px 14px;margin:0 0 12px">
+   <div style="min-width:0;flex:1">
+    <h3 style="margin:0 0 3px;font-size:15px">Install Smart Seller</h3>
+    <p class="muted" style="margin:0;font-size:12px;line-height:1.3">Install the app on your device for quick access.</p>
+   </div>
+   <button id="installAppButton" type="button" style="width:auto;min-width:112px;flex-shrink:0;margin:0;padding:10px 12px">⬇ Install App</button>
   </div>
   <div class="stats">
    <div class="stat"><div class="stat-icon">💰</div><div class="stat-label">Wallet Balance</div><strong id="homeBalance" class="green"></strong><button class="green-btn" onclick="openPage('wallet')">View Wallet</button></div>
