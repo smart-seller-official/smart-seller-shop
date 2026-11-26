@@ -1354,6 +1354,7 @@ let customerAuthStatusById=new Map();
 let customerAuthStatusLoadedAt=0;
 let customerManagementOrders=[];
 let customerManagementFilter="all";
+let customerManagementNewCustomerIds=new Set();
 async function loadCustomerAuthStatuses(force=false){
  if(force||Date.now()-customerAuthStatusLoadedAt>60000){
   const {data,error}=await db.functions.invoke("admin-list-customers");
@@ -1371,6 +1372,11 @@ async function customersPage(version=pageVersion){
  const firstLoginRead=await db.from("admin_notifications").update({is_read:true}).eq("is_read",false).eq("source_table","customer_first_login");
  if(firstLoginRead.error)throw firstLoginRead.error;
  const activeCustomers=customers.filter(c=>c.is_active===true);
+ const seenCustomerIds=readSeenCustomerIds();
+ let seenStorageInitialized=false;
+ try{seenStorageInitialized=localStorage.getItem("smartSellerSeenCustomerIds")!==null;}catch(e){}
+ if(!seenStorageInitialized){activeCustomers.forEach(c=>seenCustomerIds.add(String(c.id)));saveSeenCustomerIds([...seenCustomerIds]);}
+ customerManagementNewCustomerIds=new Set(activeCustomers.map(c=>String(c.id)).filter(id=>!seenCustomerIds.has(id)));
  const ordersResult=await db.from("orders").select("customer_id,status,created_at").order("created_at",{ascending:false}).limit(5000);
  if(ordersResult.error)throw ordersResult.error;
  customerManagementOrders=ordersResult.data||[];
@@ -1383,7 +1389,7 @@ async function customersPage(version=pageVersion){
   <button type="button" class="stat customer-management-stat" onclick="setCustomerManagementFilter('processing')">Processing Orders<strong>${countFor(["processing","shipping"])}</strong></button>
   <button type="button" class="stat customer-management-stat" onclick="setCustomerManagementFilter('pickup')">Pickup Orders<strong>${countFor(["picked"])}</strong></button>
   <button type="button" class="stat customer-management-stat" onclick="setCustomerManagementFilter('completed')">Completed Orders<strong>${countFor(["completed"])}</strong></button>
-  <button type="button" class="stat customer-management-stat" onclick="setCustomerManagementFilter('recent')">Recently Added<strong>${Math.min(20,activeCustomers.length)}</strong></button>
+  <button type="button" class="stat customer-management-stat" onclick="setCustomerManagementFilter('recent')">Recently Added<strong id="recentCustomerCount">${customerManagementNewCustomerIds.size}</strong></button>
  </div>
  <div class="panel customer-management-panel">
   <input id="customerSearch" placeholder="Search customer name, Gmail or phone..." oninput="filterCustomerAccounts()">
@@ -1412,15 +1418,23 @@ function renderCustomerAccounts(){
  let rows=active.filter(c=>(String(c.full_name||"")+" "+String(c.email||"")+" "+String(c.phone||"")).toLowerCase().includes(q));
  if(["pending","processing","pickup","completed"].includes(customerManagementFilter))rows=rows.filter(c=>matchingOrderIds.has(String(c.id)));
  rows.sort((a,b)=>(Date.parse(b.created_at)||0)-(Date.parse(a.created_at)||0));
- if(customerManagementFilter==="recent")rows=rows.slice(0,20);
- const labels={all:"Showing all active customer accounts",pending:"Customers with pending orders",processing:"Customers with processing or shipping orders",pickup:"Customers with pickup orders",completed:"Customers with completed orders",recent:"Showing the 20 most recently added active customers"};
+ if(customerManagementFilter==="recent")rows=rows.filter(c=>customerManagementNewCustomerIds.has(String(c.id)));
+ const labels={all:"Showing all active customer accounts",pending:"Customers with pending orders",processing:"Customers with processing or shipping orders",pickup:"Customers with pickup orders",completed:"Customers with completed orders",recent:"Showing new customer accounts not viewed before"};
  const label=document.getElementById("customerManagementFilterLabel");if(label)label.textContent=labels[customerManagementFilter]||labels.all;
  box.innerHTML=rows.map(c=>{
   const details=[c.full_name,c.email,c.phone].filter(v=>String(v||"").trim()!=="");
   const orderCount=customerManagementOrders.filter(o=>String(o.customer_id||"")===String(c.id)).length;
   const showDelete=customerManagementFilter==="all"||customerManagementFilter==="recent";
   return "<div class=\"kyc-row customer-management-row\"><span class=\"kyc-customer\" onclick=\"openCustomerOrdersFromManagement('"+esc(c.id)+"')\">"+(details.map(esc).join(" — ")||"Customer")+"</span><span class=\"muted\">Orders: "+orderCount+"</span><button class=\"gray\" onclick=\"openCustomerOrdersFromManagement('"+esc(c.id)+"')\">Details</button>"+(showDelete?"<button class=\"red\" onclick=\"deleteCustomerAccount('"+esc(c.id)+"')\">Delete</button>":"")+"</div>";
- }).join("")||"No active customers found.";
+ }).join("")||"No new customer accounts.";
+ if(customerManagementFilter==="recent"){
+  const seen=readSeenCustomerIds();
+  rows.forEach(c=>seen.add(String(c.id)));
+  saveSeenCustomerIds([...seen]);
+  rows.forEach(c=>customerManagementNewCustomerIds.delete(String(c.id)));
+  const count=document.getElementById("recentCustomerCount");
+  if(count)count.textContent=String(customerManagementNewCustomerIds.size);
+ }
 }
 function filterCustomerAccounts(){
  renderCustomerAccounts();
