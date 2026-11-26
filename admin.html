@@ -355,7 +355,7 @@ async function start(){
  const savedButton=[...document.querySelectorAll("aside button")].find(b=>(b.getAttribute("onclick")||"").includes("'"+savedAdminPage+"'"));
  await go(savedAdminPage,savedButton||document.querySelector("aside button"));
  await refreshAdminBadges();
- if(!window.adminBadgeTimer)window.adminBadgeTimer=setInterval(()=>{refreshAdminBadges();if(current==="dashboard")dashboard();if(current==="premium_purchases")premiumPurchasesPage();if(current==="kyc_submissions")kycPage();if(current==="withdrawals")withdrawalsPage();if(current==="customers")customersPage();if(current==="customer_products"||current==="orders")refreshCustomerProducts();if(current==="orders")refreshOrderPickupNotifications();if(current==="notifications")notificationsPage();},5000);
+ if(!window.adminBadgeTimer)window.adminBadgeTimer=setInterval(()=>{refreshAdminBadges();if(current==="dashboard")dashboard();if(current==="premium_purchases")premiumPurchasesPage();if(current==="kyc_submissions")kycPage();if(current==="withdrawals")withdrawalsPage();if(current==="customer_products"||current==="orders")refreshCustomerProducts();if(current==="orders")refreshOrderPickupNotifications();if(current==="notifications")notificationsPage();},5000);
 }
 async function check(){
  if(!db)return;
@@ -911,7 +911,7 @@ async function ordersPage(version=pageVersion){
  const customersWithProducts=customers.filter(c=>customerIdsWithProducts.has(String(c.id)));
  if(!pageIs("orders",version))return;profitEdited=false;orderDraftRowCount=0;
  putContent(`
- <h2>Orders</h2>
+ <h2>Orders${customers.find(c=>String(c.id)===String(orderListCustomerFilterId))? " — "+esc(customers.find(c=>String(c.id)===String(orderListCustomerFilterId)).full_name||customers.find(c=>String(c.id)===String(orderListCustomerFilterId)).email||"Customer"):""}</h2>
  <div class="panel"><h3>Customer Pickup Notifications</h3><div id="orderPickupNotificationList"><p class="muted">Loading notifications...</p></div></div>
  <div class="panel"><h3>Send Order to Customer</h3>
  <label>Customer</label>
@@ -1418,11 +1418,19 @@ function renderCustomerAccounts(){
  box.innerHTML=rows.map(c=>{
   const details=[c.full_name,c.email,c.phone].filter(v=>String(v||"").trim()!=="");
   const orderCount=customerManagementOrders.filter(o=>String(o.customer_id||"")===String(c.id)).length;
-  return "<div class=\"kyc-row customer-management-row\"><span class=\"kyc-customer\" onclick=\"openCustomerProfile('"+esc(c.id)+"')\">"+(details.map(esc).join(" — ")||"Customer")+"</span><span class=\"muted\">Orders: "+orderCount+"</span><button class=\"gray\" onclick=\"openCustomerProfile('"+esc(c.id)+"')\">Details</button><button class=\"red\" onclick=\"deleteCustomerAccount('"+esc(c.id)+"')\">Delete</button></div>";
+  return "<div class=\"kyc-row customer-management-row\"><span class=\"kyc-customer\" onclick=\"openCustomerOrdersFromManagement('"+esc(c.id)+"')\">"+(details.map(esc).join(" — ")||"Customer")+"</span><span class=\"muted\">Orders: "+orderCount+"</span><button class=\"gray\" onclick=\"openCustomerOrdersFromManagement('"+esc(c.id)+"')\">Orders & Details</button><button class=\"red\" onclick=\"deleteCustomerAccount('"+esc(c.id)+"')\">Delete</button></div>";
  }).join("")||"No active customers found.";
 }
 function filterCustomerAccounts(){
  renderCustomerAccounts();
+}
+async function openCustomerOrdersFromManagement(id){
+ const customer=customers.find(c=>String(c.id)===String(id));
+ if(!customer)return note("Customer not found.",true);
+ orderListCustomerFilterId=String(id);
+ orderCustomerFilterId=String(id);
+ const ordersButton=[...document.querySelectorAll("aside button")].find(b=>(b.getAttribute("onclick")||"").includes("'orders'"));
+ await go("orders",ordersButton||null);
 }
 async function deleteCustomerAccount(id){
  const c=customers.find(x=>String(x.id)===String(id));
