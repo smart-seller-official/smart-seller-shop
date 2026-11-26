@@ -308,15 +308,15 @@ async function refreshAdminBadges(){
  if(!db)return;
  try{
   const results=await Promise.all([
-   db.from("orders").select("id,status"),
-   db.from("support_chat_messages").select("customer_id,sender,sender_role,created_at,read_at").order("created_at",{ascending:true}).limit(2000),
-   db.from("kyc_submissions").select("id,status"),
-   db.from("withdrawals").select("id,status"),
-   db.from("profiles").select("id"),
+   db.from("orders").select("id,status").limit(1000),
+   db.from("support_chat_messages").select("customer_id,sender,sender_role,created_at,read_at").order("created_at",{ascending:false}).limit(500),
+   db.from("kyc_submissions").select("id,status").limit(1000),
+   db.from("withdrawals").select("id,status").limit(1000),
+   db.from("profiles").select("id").limit(1000),
    db.from("admin_notifications").select("id",{count:"exact",head:true}).eq("is_read",false).in("source_table",["withdrawals","kyc_submissions","support_chat_messages","support_messages"]),
    db.from("admin_notifications").select("id").eq("is_read",false).in("source_table",["withdrawals","kyc_submissions","support_chat_messages","support_messages"]).order("created_at",{ascending:false}).limit(100),
    db.from("admin_notifications").select("id",{count:"exact",head:true}).eq("is_read",false).eq("source_table","customer_first_login"),
-   db.from("premium_purchases").select("id,status").eq("status","pending")
+   db.from("premium_purchases").select("id,status").eq("status","pending").limit(500)
   ]);
   if(results[0].error)throw results[0].error;if(results[1].error)throw results[1].error;if(results[2].error)throw results[2].error;if(results[3].error)throw results[3].error;if(results[4].error)throw results[4].error;if(results[5].error)throw results[5].error;if(results[6].error)throw results[6].error;if(results[7].error)throw results[7].error;if(results[8].error)throw results[8].error;
   const notificationIds=(results[6].data||[]).map(n=>String(n.id));
@@ -355,7 +355,7 @@ async function start(){
  const savedButton=[...document.querySelectorAll("aside button")].find(b=>(b.getAttribute("onclick")||"").includes("'"+savedAdminPage+"'"));
  await go(savedAdminPage,savedButton||document.querySelector("aside button"));
  await refreshAdminBadges();
- if(!window.adminBadgeTimer)window.adminBadgeTimer=setInterval(()=>{refreshAdminBadges();if(current==="dashboard")dashboard();if(current==="premium_purchases")premiumPurchasesPage();if(current==="kyc_submissions")kycPage();if(current==="withdrawals")withdrawalsPage();if(current==="customer_products"||current==="orders")refreshCustomerProducts();if(current==="orders")refreshOrderPickupNotifications();if(current==="notifications")notificationsPage();},5000);
+ if(!window.adminBadgeTimer)window.adminBadgeTimer=setInterval(()=>{if(!document.hidden)refreshAdminBadges();},30000);
 }
 async function check(){
  if(!db)return;
