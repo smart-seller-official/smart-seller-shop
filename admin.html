@@ -1381,7 +1381,7 @@ async function customersPage(version=pageVersion){
   <button type="button" class="stat customer-management-stat" onclick="setCustomerManagementFilter('all')">All Active Customers<strong>${activeCustomers.length}</strong></button>
   <button type="button" class="stat customer-management-stat" onclick="setCustomerManagementFilter('pending')">Pending Orders<strong>${countFor(["pending"])}</strong></button>
   <button type="button" class="stat customer-management-stat" onclick="setCustomerManagementFilter('processing')">Processing Orders<strong>${countFor(["processing","shipping"])}</strong></button>
-  <button type="button" class="stat customer-management-stat" onclick="setCustomerManagementFilter('pickup')">Pickup Orders<strong>${countFor(["picked","pickup"])}</strong></button>
+  <button type="button" class="stat customer-management-stat" onclick="setCustomerManagementFilter('pickup')">Pickup Orders<strong>${countFor(["picked"])}</strong></button>
   <button type="button" class="stat customer-management-stat" onclick="setCustomerManagementFilter('completed')">Completed Orders<strong>${countFor(["completed"])}</strong></button>
   <button type="button" class="stat customer-management-stat" onclick="setCustomerManagementFilter('recent')">Recently Added<strong>${Math.min(20,activeCustomers.length)}</strong></button>
  </div>
@@ -1405,7 +1405,7 @@ function renderCustomerAccounts(){
   const status=String(o.status||"").trim().toLowerCase();
   if(customerManagementFilter==="pending")return status==="pending";
   if(customerManagementFilter==="processing")return ["processing","shipping"].includes(status);
-  if(customerManagementFilter==="pickup")return ["picked","pickup"].includes(status);
+  if(customerManagementFilter==="pickup")return status==="picked";
   if(customerManagementFilter==="completed")return status==="completed";
   return false;
  }).map(o=>String(o.customer_id||"")));
@@ -1418,7 +1418,8 @@ function renderCustomerAccounts(){
  box.innerHTML=rows.map(c=>{
   const details=[c.full_name,c.email,c.phone].filter(v=>String(v||"").trim()!=="");
   const orderCount=customerManagementOrders.filter(o=>String(o.customer_id||"")===String(c.id)).length;
-  return "<div class=\"kyc-row customer-management-row\"><span class=\"kyc-customer\" onclick=\"openCustomerOrdersFromManagement('"+esc(c.id)+"')\">"+(details.map(esc).join(" — ")||"Customer")+"</span><span class=\"muted\">Orders: "+orderCount+"</span><button class=\"gray\" onclick=\"openCustomerOrdersFromManagement('"+esc(c.id)+"')\">Orders & Details</button><button class=\"red\" onclick=\"deleteCustomerAccount('"+esc(c.id)+"')\">Delete</button></div>";
+  const showDelete=customerManagementFilter==="all"||customerManagementFilter==="recent";
+  return "<div class=\"kyc-row customer-management-row\"><span class=\"kyc-customer\" onclick=\"openCustomerOrdersFromManagement('"+esc(c.id)+"')\">"+(details.map(esc).join(" — ")||"Customer")+"</span><span class=\"muted\">Orders: "+orderCount+"</span><button class=\"gray\" onclick=\"openCustomerOrdersFromManagement('"+esc(c.id)+"')\">Details</button>"+(showDelete?"<button class=\"red\" onclick=\"deleteCustomerAccount('"+esc(c.id)+"')\">Delete</button>":"")+"</div>";
  }).join("")||"No active customers found.";
 }
 function filterCustomerAccounts(){
