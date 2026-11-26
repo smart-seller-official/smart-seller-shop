@@ -1008,7 +1008,7 @@ async function sendOrder(){
    if(claim.error)throw claim.error;
    if(!claim.data)throw new Error("Selected customer product pehle hi order ho chuka hai. Refresh karke dobara try karein.");
    claimed.push({id:item.p.id,orderedAt});
-   const o=await db.from("orders").insert({customer_id:cid,status:"pending",total_amount:item.total,admin_profit:item.profit}).select("id").single();
+   const o=await db.from("orders").insert({customer_id:cid,status:"pending",total_amount:item.total,product_price:item.unitPrice,admin_profit:item.profit}).select("id").single();
    if(o.error)throw o.error;
    created.push(o.data.id);
    const it=await db.from("order_items").insert({order_id:o.data.id,product_id:item.p.product_id,product_name:item.p.product_name||"Product",quantity:item.qty,unit_price:item.unitPrice});
