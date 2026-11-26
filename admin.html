@@ -1366,7 +1366,7 @@ async function loadCustomerAuthStatuses(force=false){
 }
 async function customersPage(version=pageVersion){
  await loadCustomers();
- await loadCustomerAuthStatuses(true);
+ await loadCustomerAuthStatuses();
  if(!pageIs("customers",version))return;
  const firstLoginRead=await db.from("admin_notifications").update({is_read:true}).eq("is_read",false).eq("source_table","customer_first_login");
  if(firstLoginRead.error)throw firstLoginRead.error;
