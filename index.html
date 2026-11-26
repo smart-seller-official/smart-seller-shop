@@ -1829,7 +1829,7 @@ window.buyPremiumPackage=async function(packageId,button){
   const {data,error}=await db.rpc("purchase_premium_package",{p_package_id:packageId});
   if(error)throw error;
   const result=Array.isArray(data)?data[0]:data;
-  alert((result?.package_name||"Premium package")+" purchase submitted. Status: Pending. Amount deducted: "+money(result?.amount));
+  alert((result?.package_name||"Premium package")+" purchase submitted. Status: Pending. Your available balance remains unchanged: "+money(result?.available_balance));
   await loadWallet();
   await loadPremiumPage();
   await loadPremiumSummary();
