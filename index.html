@@ -1722,6 +1722,14 @@ function premiumDurationMonths(price){
  const durations={1000:6,2000:12,3000:18,5000:24,8000:30,10000:36};
  return durations[amount]||0;
 }
+function premiumDurationLabel(price){
+ const months=premiumDurationMonths(price);
+ if(!months)return "";
+ const years=Math.floor(months/12),remaining=months%12;
+ if(!years)return months+" months";
+ if(!remaining)return years+" "+(years===1?"year":"years");
+ return years+" year"+(years===1?"":"s")+" "+remaining+" months";
+}
 function premiumExpiryDate(activeDate,price){
  const months=premiumDurationMonths(price);
  if(!activeDate||!months)return "";
@@ -1800,7 +1808,7 @@ window.loadPremiumPage=async function(){
     const cashback=Math.round(Number(p.price||0)*0.15*100)/100;
      const benefits=(p.benefits||[]).map(x=>"<li>"+premiumEscape(x)+"</li>").concat("<li>Cashback bonus: "+money(cashback)+"</li>").join("");
     const enough=Number(balanceResult.available)>=Number(p.price);
-    return "<div class='card' style='margin:0;padding:10px;border:1px solid #d8b66b'><h3 style='margin:0 0 4px'>"+premiumEscape(p.name)+"</h3><div style='font-size:21px;font-weight:900;color:#059669;margin:3px 0'>"+money(p.price)+"</div><strong>Package Benefits</strong><ul style='padding-left:20px;margin:4px 0'>"+benefits+"</ul><button type='button' class='full "+(enough?"":"gray")+"' "+(enough?"":"disabled")+" onclick=\"buyPremiumPackage('"+premiumEscape(p.id)+"',this)\">"+(enough?"Buy Now":"Insufficient Balance")+"</button></div>";
+    return "<div class='card' style='margin:0;padding:10px;border:1px solid #d8b66b'><h3 style='margin:0 0 4px'>"+premiumEscape(p.name)+"</h3><div style='font-size:21px;font-weight:900;color:#059669;margin:3px 0'>"+money(p.price)+"</div><p style='margin:4px 0;font-weight:700'>Validity: "+premiumEscape(premiumDurationLabel(p.price))+"</p><strong>Package Benefits</strong><ul style='padding-left:20px;margin:4px 0'>"+benefits+"</ul><button type='button' class='full "+(enough?"":"gray")+"' "+(enough?"":"disabled")+" onclick=\"buyPremiumPackage('"+premiumEscape(p.id)+"',this)\">"+(enough?"Buy Now":"Insufficient Balance")+"</button></div>";
    }).join("")||"<p class='muted'>No premium packages are available right now.</p>";
   }
   const balanceNote=$("premiumBalanceNote");
