@@ -1153,7 +1153,8 @@ async function walletHistory(){
   if(!pageIs("wallet_transactions",version))return;if(wr.error)throw wr.error;if(or.error)throw or.error;
   const wallet=calculateWalletSummary(wr.data||[],or.data||[]);
   summary.innerHTML=`<div class="cards"><div class="stat">Available Balance<strong>$${money(wallet.available)}</strong></div><div class="stat">Total Profit<strong>$${money(wallet.profit)}</strong></div><div class="stat">Applied Balance<strong>$${money(wallet.applied)}</strong></div></div>`;
-  list.innerHTML=renderSimple(wr.data||[]);
+  const depositWithdrawalHistory=(wr.data||[]).filter(t=>["deposit","withdrawal"].includes(String(t.transaction_type||"").toLowerCase().trim()));
+  list.innerHTML=renderSimple(depositWithdrawalHistory);
  }catch(e){if(pageIs("wallet_transactions",version))note("Wallet load error: "+e.message,true)}
 }
 
