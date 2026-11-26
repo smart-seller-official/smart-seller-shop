@@ -1773,7 +1773,7 @@ async function loadPremiumSummary(){
   }).join("");
   if(walletBox)walletBox.innerHTML=html;
   const latest=purchases[0],latestStatus=String(latest.status||"pending").toLowerCase(),latestLabel=latestStatus==="approved"?"Active":latestStatus==="rejected"?"Rejected":"Pending";
-  if(homeBox)homeBox.textContent=(latest.package_name||"Premium Package")+" · "+latestLabel;
+  if(homeBox)homeBox.textContent=(latest.package_name||"Premium Package")+(latestStatus==="approved"?"":" · "+latestLabel);
  }catch(err){
   if(walletBox)walletBox.textContent="Premium details unavailable.";
   if(homeBox)homeBox.textContent="View Packages";
