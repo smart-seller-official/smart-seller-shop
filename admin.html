@@ -637,11 +637,13 @@ async function openPremiumCustomers(){
   const r=await db.from("premium_purchases").select("customer_id,package_name,package_price,status,created_at").in("status",["pending","approved"]).order("created_at",{ascending:false}).limit(5000);
   if(r.error)throw r.error;
   const rows=r.data||[];
-  const ids=[...new Set(rows.map(x=>String(x.customer_id||"")).filter(Boolean))];
   await loadCustomers();
+  const activeCustomerIds=new Set(customers.map(c=>String(c.id)));
+  const visibleRows=rows.filter(x=>activeCustomerIds.has(String(x.customer_id||"")));
+  const ids=[...new Set(visibleRows.map(x=>String(x.customer_id||"")).filter(Boolean))];
   const html="<h2>Premium Package Customers</h2><p class='muted'>Sirf un customers ki list jinhon ne premium package purchase kiya hai. Rejected/refunded requests is list mein shamil nahi hain.</p><button class='gray' onclick='go(&quot;dashboard&quot;)'>Back to Dashboard</button><div class='panel'>"+(ids.map(id=>{
    const customer=customers.find(c=>String(c.id)===id);
-   const purchases=rows.filter(p=>String(p.customer_id)===id);
+   const purchases=visibleRows.filter(p=>String(p.customer_id)===id);
    const packages=purchases.map(p=>esc(p.package_name||"Premium Package")+" — "+money(p.package_price)+" ("+(String(p.status).toLowerCase()==="approved"?"Active":"Pending")+")").join("<br>");
    return "<div class='customer' style='margin:7px 0;padding:10px'><strong>"+esc(customer?.full_name||"Customer")+"</strong><div class='muted'>"+esc(customer?.email||"Email not available")+"</div><div style='margin-top:6px'>"+packages+"</div></div>";
   }).join("")||"No premium customers yet.")+"</div>";
