@@ -1367,21 +1367,6 @@ function openOrderTracking(o){
  const info=document.createElement("div");info.className="ot-info";
  const infoTitle=document.createElement("h3");infoTitle.textContent="Order Summary";info.appendChild(infoTitle);
  [["Product Amount",money(orderPrice(o))],["Expected Profit",money(orderProfit(o))],["Expected Return",money(orderPrice(o)+orderProfit(o))],["Order Date",o.created_at?new Date(o.created_at).toLocaleString():"-"]].forEach(([label,value])=>{const row=document.createElement("div");row.className="ot-row";const l=document.createElement("span");l.textContent=label;const v=document.createElement("strong");v.textContent=value;row.append(l,v);info.appendChild(row)});panel.appendChild(info);
- const historyPanel=document.createElement("div");historyPanel.className="ot-info";
- const historyTitle=document.createElement("h3");historyTitle.textContent="Status History & Times";historyPanel.appendChild(historyTitle);
- const historyEvents=Array.isArray(o.status_history)?o.status_history:[];
- if(historyEvents.length){
-  historyEvents.forEach(h=>{
-   const row=document.createElement("div");row.className="ot-row";
-   const left=document.createElement("span");left.textContent=orderStatus({status:h.status})+(h.is_backfill?" (recorded at setup)":"");
-   const right=document.createElement("strong");right.textContent=h.changed_at?new Date(h.changed_at).toLocaleString():"—";
-   row.append(left,right);historyPanel.appendChild(row);
-   if(h.is_backfill){const hint=document.createElement("small");hint.className="ot-sub";hint.style.display="block";hint.textContent="Earlier status changes were not recorded before tracking was enabled.";historyPanel.appendChild(hint)}
-  });
- }else{
-  const empty=document.createElement("p");empty.className="ot-sub";empty.textContent="Status times will appear here as the order moves through each stage.";historyPanel.appendChild(empty);
- }
- panel.appendChild(historyPanel);
  const note=document.createElement("p");note.className="ot-sub";note.style.marginTop="14px";note.textContent="You will see the latest stage here when the seller updates your order.";panel.appendChild(note);
  overlay.addEventListener("click",e=>{if(e.target===overlay)overlay.remove()});overlay.appendChild(panel);document.body.appendChild(overlay);
 }
@@ -1432,11 +1417,6 @@ window.loadOrders=async function(){
   if(error)throw error;
   const orders=data||[];
   if(orders.length){
-   const {data:historyData,error:historyError}=await db.from("order_status_history").select("order_id,status,changed_at,is_backfill").in("order_id",orders.map(o=>o.id)).order("changed_at",{ascending:true});
-   if(historyError)console.warn("Order status history:",historyError.message);
-   const historyByOrder={};
-   (historyData||[]).forEach(h=>{(historyByOrder[String(h.order_id)]??=[]).push(h)});
-   orders.forEach(o=>{o.status_history=historyByOrder[String(o.id)]||[]});
    const {data:itemData,error:itemError}=await db.from("order_items").select("*").in("order_id",orders.map(o=>o.id));
    if(itemError)throw itemError;
    const productIds=[...new Set((itemData||[]).map(item=>item.product_id).filter(Boolean).map(String))];
