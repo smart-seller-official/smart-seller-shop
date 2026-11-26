@@ -1066,6 +1066,18 @@ async function loadOrders(){
  let items=[];
  if(allRows.length){const ir=await db.from("order_items").select("*").in("order_id",allRows.map(x=>x.id));if(ir.error){if(pageIs("orders",version))note("Order items load error: "+ir.error.message,true);return}items=ir.data||[]}
  if(!pageIs("orders",version))return;
+ let statusHistoryRows=[];
+ if(allRows.length){
+  const hr=await db.from("order_status_history").select("order_id,status,changed_at,is_backfill").in("order_id",allRows.map(x=>x.id)).order("changed_at",{ascending:true});
+  if(hr.error){if(pageIs("orders",version))note("Order status history load error: "+hr.error.message,true);return}
+  statusHistoryRows=hr.data||[];
+ }
+ const statusHistoryByOrder={};
+ statusHistoryRows.forEach(h=>{(statusHistoryByOrder[String(h.order_id)]??=[]).push(h)});
+ const historyMarkup=id=>{
+  const events=statusHistoryByOrder[String(id)]||[];
+  return events.length?'<details><summary>'+events.length+' updates</summary>'+events.map(h=>'<div style="padding:4px 0;border-bottom:1px solid #eee"><b>'+esc(String(h.status||"").toUpperCase())+'</b><br><small>'+esc(h.changed_at?new Date(h.changed_at).toLocaleString():"—")+'</small>'+(h.is_backfill?'<br><small class="muted">Existing record; earlier exact change time unavailable</small>':'')+'</div>').join('')+'</details>':"—";
+ };
  const walletResult=await db.from("wallet_transactions").select("customer_id,amount,transaction_type,status,description").limit(5000);
  if(!pageIs("orders",version))return;if(walletResult.error){note("Wallet balance load error: "+walletResult.error.message,true);return}
  const transactionsByCustomer={};(walletResult.data||[]).forEach(x=>{const cid=String(x.customer_id);(transactionsByCustomer[cid]??=[]).push(x)});
@@ -1084,20 +1096,20 @@ async function loadOrders(){
  if(!pageIs("orders",version))return;const list=document.getElementById("orderList");if(!list||!list.isConnected)return;
  const statuses=[["pending","Pickup"],["picked","Picked"],["processing","Processing"],["shipping","Shipping"],["completed","Complete"],["cancelled","Cancel"]];
  const renderOrderTable=rows=>rows.length
- ?"<div class='tablewrap'><table><tr><th>Customer</th><th>Customer Available Balance</th><th>Order ID</th><th>Order Date & Time</th><th>Product / Quantity</th><th>Product Price</th><th>Profit</th><th>Expected Return</th><th>Status</th><th>Update</th></tr>"+
+ ?"<div class='tablewrap'><table><tr><th>Customer</th><th>Customer Available Balance</th><th>Order ID</th><th>Order Date & Time</th><th>Product / Quantity</th><th>Product Price</th><th>Profit</th><th>Expected Return</th><th>Status</th><th>Status Times</th><th>Update</th></tr>"+
  rows.map(x=>{
   const oi=visibleItems.filter(i=>String(i.order_id)===String(x.id)),itemTotal=oi.reduce((sum,i)=>sum+Number(i.unit_price||0)*Number(i.quantity||0),0),price=oi.length?itemTotal:Number(x.total_amount??x.product_price??0),profit=Number(x.admin_profit||0),balance=balanceByCustomer[String(x.customer_id)]||0;
   const itemText=oi.length?oi.map(i=>`<div><b>${esc(i.product_name||"Product")}</b><br>Quantity: ${esc(i.quantity)}<br>Unit Price: $${money(i.unit_price)}</div>`).join("<hr>"):"Product details unavailable",st=String(x.status||"").toLowerCase().trim();
-  return `<tr><td>${customerLink(x.customer_id)}<p><button onclick="openCustomerProfile('${esc(x.customer_id)}')">View Full Details</button></p></td><td><b>$${money(balance)}</b></td><td>${esc(x.id)}</td><td>${esc(x.created_at?new Date(x.created_at).toLocaleString():"—")}</td><td>${itemText}</td><td>${money(price)}</td><td>$${money(profit)}</td><td><b>$${money(price+profit)}</b></td><td><b>${esc(x.status)}</b></td><td><select id="orderstatus_${esc(x.id)}">${statuses.map(([v,l])=>`<option value="${v}" ${st===v?"selected":""}>${l}</option>`).join("")}${!statuses.some(([v])=>v===st)?`<option value="${esc(st)}" selected>${esc(x.status)} (Old Status)</option>`:""}</select><button type="button" onclick="window.updateOrder('${esc(x.id)}')">Save</button></td></tr>`;
+  return `<tr><td>${customerLink(x.customer_id)}<p><button onclick="openCustomerProfile('${esc(x.customer_id)}')">View Full Details</button></p></td><td><b>$${money(balance)}</b></td><td>${esc(x.id)}</td><td>${esc(x.created_at?new Date(x.created_at).toLocaleString():"—")}</td><td>${itemText}</td><td>${money(price)}</td><td>$${money(profit)}</td><td><b>$${money(price+profit)}</b></td><td><b>${esc(x.status)}</b></td><td>${historyMarkup(x.id)}</td><td><select id="orderstatus_${esc(x.id)}">${statuses.map(([v,l])=>`<option value="${v}" ${st===v?"selected":""}>${l}</option>`).join("")}${!statuses.some(([v])=>v===st)?`<option value="${esc(st)}" selected>${esc(x.status)} (Old Status)</option>`:""}</select><button type="button" onclick="window.updateOrder('${esc(x.id)}')">Save</button></td></tr>`;
  }).join("")+"</table></div>":"No orders found for this customer.";
  list.innerHTML=activeRows.length?renderOrderTable(activeRows):"No active orders.";
  const recentBox=document.getElementById("adminRecentOrders");
  if(recentBox)recentBox.innerHTML=recentRows.length
-  ?"<div class='tablewrap'><table class='recent-orders-table'><tr><th>Customer</th><th>Order ID</th><th>Order Date & Time</th><th>Product / Quantity</th><th>Amount</th><th>Status</th></tr>"+
+  ?"<div class='tablewrap'><table class='recent-orders-table'><tr><th>Customer</th><th>Order ID</th><th>Order Date & Time</th><th>Product / Quantity</th><th>Amount</th><th>Status</th><th>Status Times</th></tr>"+
    recentRows.map(x=>{
     const oi=visibleItems.filter(i=>String(i.order_id)===String(x.id)),itemTotal=oi.reduce((sum,i)=>sum+Number(i.unit_price||0)*Number(i.quantity||0),0),price=oi.length?itemTotal:Number(x.total_amount??x.product_price??0);
     const itemText=oi.length?oi.map(i=>"<div><b>"+esc(i.product_name||"Product")+"</b> · Qty: "+esc(i.quantity)+"</div>").join(""):"Product details unavailable";
-    return "<tr><td>"+customerLink(x.customer_id)+"</td><td>"+esc(x.id)+"</td><td>"+(x.created_at?new Date(x.created_at).toLocaleString():"—")+"</td><td>"+itemText+"</td><td><b>$"+money(price)+"</b></td><td><b>"+esc(x.status)+"</b></td></tr>";
+    return "<tr><td>"+customerLink(x.customer_id)+"</td><td>"+esc(x.id)+"</td><td>"+(x.created_at?new Date(x.created_at).toLocaleString():"—")+"</td><td>"+itemText+"</td><td><b>$"+money(price)+"</b></td><td><b>"+esc(x.status)+"</b></td><td>"+historyMarkup(x.id)+"</td></tr>";
    }).join("")+"</table></div>"
   :"No recently completed or cancelled orders.";
 }
