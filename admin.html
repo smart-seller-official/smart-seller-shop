@@ -59,6 +59,13 @@ th{background:#f4f6fb}
 .support-unread{flex:0 0 auto;background:#e5485d;color:white;border-radius:12px;padding:4px 8px;font-weight:700}
 .support-read{flex:0 0 auto;color:#159b79;font-weight:700}
 .support-row button{flex:0 0 auto;margin:0;padding:4px 8px}
+.customer-management-cards{grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:9px;margin-bottom:12px}
+.customer-management-stat{width:100%;text-align:left;cursor:pointer;border:1px solid #e1e6ef;background:#fff;color:#263750;padding:12px;border-radius:10px}
+.customer-management-stat strong{display:block;color:#5145c5;font-size:25px;margin-top:7px}
+.customer-management-stat:hover{background:#f3f5ff;outline:2px solid #c8c4ff}
+.customer-management-panel{margin-top:10px}
+.customer-management-row{align-items:center}
+@media(max-width:600px){.customer-management-row{flex-wrap:wrap}.customer-management-row .kyc-customer{flex-basis:100%}}
 @media(max-width:760px){.support-customer{flex-basis:145px}.support-email{flex-basis:170px}}
 img.product{width:65px;height:65px;object-fit:cover;border-radius:7px}
 .product-edit-modal{display:none;position:fixed;inset:0;background:#0009;z-index:10000;overflow:auto;padding:16px}
@@ -187,7 +194,7 @@ body.admin-chat-open .chat-composer button{display:inline-flex!important;visibil
 <button onclick="go('premium_purchases',this)">💎 Premium Packages <small id="adminPremiumBadge" class="admin-nav-count"></small></button>
 <button onclick="go('withdrawals',this)">⇧ Withdrawals <small id="adminWithdrawalsBadge" class="admin-nav-count"></small></button>
 <button onclick="go('kyc_submissions',this)">✓ KYC <small id="adminKycBadge" class="admin-nav-count"></small></button>
-<button onclick="go('customers',this)">♙ Customer Accounts <small id="adminCustomersBadge" class="admin-nav-count"></small></button>
+<button onclick="go('customers',this)">♙ Customer Management <small id="adminCustomersBadge" class="admin-nav-count"></small></button>
 <button onclick="go('support_messages',this)">✉ Customer Service <small id="adminMessagesBadge" class="admin-nav-count"></small></button>
 <button onclick="go('notifications',this)">♧ Notifications <small id="adminNotificationsBadge" class="admin-nav-count"></small></button>
 <button onclick="go('credit_score_history',this)">◷ Credit Score History</button>
@@ -1345,33 +1352,77 @@ function saveSeenCustomerIds(ids){
 }
 let customerAuthStatusById=new Map();
 let customerAuthStatusLoadedAt=0;
+let customerManagementOrders=[];
+let customerManagementFilter="all";
 async function loadCustomerAuthStatuses(force=false){
  if(force||Date.now()-customerAuthStatusLoadedAt>60000){
   const {data,error}=await db.functions.invoke("admin-list-customers");
   if(error)throw error;
   if(!data?.success||!Array.isArray(data.customers))throw new Error(data?.error||"Email verification data unavailable.");
-  customerAuthStatusById=new Map(data.customers.map(c=>[String(c.id),{email:c.email||null,email_verified:c.email_verified===true,email_verified_at:c.email_verified_at||null}]));
+  customerAuthStatusById=new Map(data.customers.map(c=>[String(c.id),{email:c.email||null,email_verified:c.email_verified===true,email_verified_at:c.email_verified_at||null,is_active:c.is_active===true,banned_until:c.banned_until||null}]));
   customerAuthStatusLoadedAt=Date.now();
  }
  customers=customers.map(c=>({...c,...(customerAuthStatusById.get(String(c.id))||{})}));
 }
 async function customersPage(version=pageVersion){
- await loadCustomers();if(!pageIs("customers",version))return;
+ await loadCustomers();
+ await loadCustomerAuthStatuses(true);
+ if(!pageIs("customers",version))return;
  const firstLoginRead=await db.from("admin_notifications").update({is_read:true}).eq("is_read",false).eq("source_table","customer_first_login");
  if(firstLoginRead.error)throw firstLoginRead.error;
- putContent("<h2>Customer Accounts</h2><div class=\"panel\"><input id=\"customerSearch\" placeholder=\"Search customer name or Gmail\" oninput=\"filterCustomerAccounts()\"><div id=\"customerAccountsList\"></div></div>","customers",version);
- renderCustomerAccounts(customers);
+ const activeCustomers=customers.filter(c=>c.is_active===true);
+ const ordersResult=await db.from("orders").select("customer_id,status,created_at").order("created_at",{ascending:false}).limit(5000);
+ if(ordersResult.error)throw ordersResult.error;
+ customerManagementOrders=ordersResult.data||[];
+ customerManagementFilter="all";
+ const countFor=status=>new Set(customerManagementOrders.filter(o=>status(o.status)).map(o=>String(o.customer_id||"")).filter(id=>activeCustomers.some(c=>String(c.id)===id))).size;
+ const html=`<h2>Customer Management</h2>
+ <div class="cards customer-management-cards">
+  <button class="stat customer-management-stat" onclick="setCustomerManagementFilter('all')">All Active Customers<strong>${activeCustomers.length}</strong></button>
+  <button class="stat customer-management-stat" onclick="setCustomerManagementFilter('pending')">Pending Orders<strong>${countFor(s=>String(s||'').toLowerCase()==='pending')}</strong></button>
+  <button class="stat customer-management-stat" onclick="setCustomerManagementFilter('processing')">Processing Orders<strong>${countFor(s=>['processing','shipping'].includes(String(s||'').toLowerCase()))}</strong></button>
+  <button class="stat customer-management-stat" onclick="setCustomerManagementFilter('pickup')">Pickup Orders<strong>${countFor(s=>String(s||'').toLowerCase()==='pickup')}</strong></button>
+  <button class="stat customer-management-stat" onclick="setCustomerManagementFilter('completed')">Completed Orders<strong>${countFor(s=>String(s||'').toLowerCase()==='completed')}</strong></button>
+  <button class="stat customer-management-stat" onclick="setCustomerManagementFilter('recent')">Recently Added<strong>${Math.min(20,activeCustomers.length)}</strong></button>
+ </div>
+ <div class="panel customer-management-panel">
+  <input id="customerSearch" placeholder="Search customer name, Gmail or phone..." oninput="filterCustomerAccounts()">
+  <div id="customerManagementFilterLabel" class="muted">Showing all active customer accounts</div>
+  <div id="customerAccountsList"></div>
+ </div>`;
+ putContent(html,"customers",version);
+ renderCustomerAccounts();
 }
-function renderCustomerAccounts(rows){
+function setCustomerManagementFilter(filter){
+ customerManagementFilter=filter;
+ renderCustomerAccounts();
+}
+function renderCustomerAccounts(){
  const box=document.getElementById("customerAccountsList");if(!box)return;
+ const q=String(document.getElementById("customerSearch")?.value||"").trim().toLowerCase();
+ const active=customers.filter(c=>c.is_active===true);
+ const matchingOrderIds=new Set(customerManagementOrders.filter(o=>{
+  const status=String(o.status||"").trim().toLowerCase();
+  if(customerManagementFilter==="pending")return status==="pending";
+  if(customerManagementFilter==="processing")return ["processing","shipping"].includes(status);
+  if(customerManagementFilter==="pickup")return status==="pickup";
+  if(customerManagementFilter==="completed")return status==="completed";
+  return false;
+ }).map(o=>String(o.customer_id||"")));
+ let rows=active.filter(c=>(String(c.full_name||"")+" "+String(c.email||"")+" "+String(c.phone||"")).toLowerCase().includes(q));
+ if(["pending","processing","pickup","completed"].includes(customerManagementFilter))rows=rows.filter(c=>matchingOrderIds.has(String(c.id)));
+ rows.sort((a,b)=>(Date.parse(b.created_at)||0)-(Date.parse(a.created_at)||0));
+ if(customerManagementFilter==="recent")rows=rows.slice(0,20);
+ const labels={all:"Showing all active customer accounts",pending:"Customers with pending orders",processing:"Customers with processing or shipping orders",pickup:"Customers with pickup orders",completed:"Customers with completed orders",recent:"Showing the 20 most recently added active customers"};
+ const label=document.getElementById("customerManagementFilterLabel");if(label)label.textContent=labels[customerManagementFilter]||labels.all;
  box.innerHTML=rows.map(c=>{
   const details=[c.full_name,c.email,c.phone].filter(v=>String(v||"").trim()!=="");
-  return "<div class=\"kyc-row\"><span class=\"kyc-customer\" onclick=\"openCustomerProfile('"+esc(c.id)+"')\">"+(details.map(esc).join(" — ")||"Customer")+"</span><button class=\"gray\" onclick=\"openCustomerProfile('"+esc(c.id)+"')\">Details</button><button class=\"red\" onclick=\"deleteCustomerAccount('"+esc(c.id)+"')\">Delete</button></div>";
- }).join("")||"No customers found.";
+  const orderCount=customerManagementOrders.filter(o=>String(o.customer_id||"")===String(c.id)).length;
+  return "<div class=\"kyc-row customer-management-row\"><span class=\"kyc-customer\" onclick=\"openCustomerProfile('"+esc(c.id)+"')\">"+(details.map(esc).join(" — ")||"Customer")+"</span><span class=\"muted\">Orders: "+orderCount+"</span><button class=\"gray\" onclick=\"openCustomerProfile('"+esc(c.id)+"')\">Details</button><button class=\"red\" onclick=\"deleteCustomerAccount('"+esc(c.id)+"')\">Delete</button></div>";
+ }).join("")||"No active customers found.";
 }
 function filterCustomerAccounts(){
- const q=val("customerSearch").toLowerCase();
- renderCustomerAccounts(customers.filter(c=>(String(c.full_name||"")+" "+String(c.email||"")+" "+String(c.phone||"")).toLowerCase().includes(q)));
+ renderCustomerAccounts();
 }
 async function deleteCustomerAccount(id){
  const c=customers.find(x=>String(x.id)===String(id));
