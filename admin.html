@@ -840,7 +840,7 @@ function calculateWalletSummary(transactions,orders){
  });
  (orders||[]).forEach(o=>{
   const status=String(o.status||"").toLowerCase().trim();
-  if(["processing","shipping","shipped","picked_up","picked up","in_progress"].includes(status)){
+  if(["picked","processing","shipping","shipped","picked_up","picked up","in_progress"].includes(status)){
    const amount=Number(o.total_amount??o.product_price??0);if(Number.isFinite(amount)&&amount>0)applied+=amount;
   }
  });
