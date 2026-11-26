@@ -731,7 +731,7 @@ body.chat-open .chat-scroll{min-height:0;overscroll-behavior:contain}
    </div>
    </div>
   </div>
-  <p class="muted">Applied Balance includes premium package purchases and picked-up orders that are not complete.</p>
+  <p class="muted">Applied Balance includes picked-up orders that are not complete.</p>
   <p id="walletMessage" class="message"></p>
  </section>
 
@@ -1252,7 +1252,7 @@ function orderProgress(status){
 
 async function getWalletSummary(){
  const [txResult,orderResult]=await Promise.all([
-  db.from("wallet_transactions").select("amount,transaction_type,status").eq("customer_id",currentUser.id),
+  db.from("wallet_transactions").select("amount,transaction_type,status,description").eq("customer_id",currentUser.id),
   db.from("orders").select("id,total_amount,product_price,status").eq("customer_id",currentUser.id)
  ]);
  if(txResult.error)throw txResult.error;
@@ -1263,6 +1263,7 @@ async function getWalletSummary(){
   const status=String(t.status||"").toLowerCase().trim();
   const amount=Math.abs(Number(t.amount)||0);
   if(!["approved","completed","success","successful","paid"].includes(status))return;
+  if(String(t.description||"").toLowerCase().startsWith("premium package purchase:"))return;
   if(type==="profit"){profit+=amount;available+=amount}
   else if(type==="purchase"||type==="applied"){available-=amount;if(type==="purchase")applied+=amount;}
   else if(type==="refund")available+=amount;
