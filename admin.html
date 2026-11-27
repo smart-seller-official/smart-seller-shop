@@ -359,10 +359,10 @@ async function refreshAdminBadges(){
   const notificationIds=notifications.map(n=>String(n.id));
   if(adminKnownNotificationIds===null){
    adminKnownNotificationIds=new Set(notificationIds);
-   const recentOrderNotifications=notifications.filter(n=>n.source_table==="orders"&&n.created_at&&(Date.now()-new Date(n.created_at).getTime())<10*60*1000);
-   if(recentOrderNotifications.length){
+   const recentNotifications=notifications.filter(n=>n.created_at&&(Date.now()-new Date(n.created_at).getTime())<10*60*1000);
+   if(recentNotifications.length){
     playAdminNotificationSound();
-    [...new Map(recentOrderNotifications.map(n=>[String(n.source_id||n.id),n])).values()].forEach(announceAdminNotification);
+    [...new Map(recentNotifications.map(n=>[String(n.source_table)+":"+String(n.source_id||n.id),n])).values()].reverse().forEach(announceAdminNotification);
    }
   }else{
    const newNotifications=notifications.filter(n=>!adminKnownNotificationIds.has(String(n.id)));
