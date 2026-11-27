@@ -352,8 +352,14 @@ async function refreshAdminBadges(){
   if(results.some(r=>r.error))throw results.find(r=>r.error).error;
   const notifications=results[6].data||[];
   const notificationIds=notifications.map(n=>String(n.id));
-  if(adminKnownNotificationIds===null)adminKnownNotificationIds=new Set(notificationIds);
-  else{
+  if(adminKnownNotificationIds===null){
+   adminKnownNotificationIds=new Set(notificationIds);
+   const recentOrderNotifications=notifications.filter(n=>n.source_table==="orders"&&n.created_at&&(Date.now()-new Date(n.created_at).getTime())<10*60*1000);
+   if(recentOrderNotifications.length){
+    playAdminNotificationSound();
+    [...new Map(recentOrderNotifications.map(n=>[String(n.source_id||n.id),n])).values()].forEach(announceAdminNotification);
+   }
+  }else{
    const newNotifications=notifications.filter(n=>!adminKnownNotificationIds.has(String(n.id)));
    if(newNotifications.length){
     playAdminNotificationSound();
@@ -1701,7 +1707,7 @@ async function sendReply(){
 /* NOTIFICATIONS */
 async function notificationsPage(version=pageVersion){
  await loadCustomers();
- const r=await db.from("admin_notifications").select("*").eq("is_read",false).in("source_table",["withdrawals","kyc_submissions","support_chat_messages","support_messages"]).order("created_at",{ascending:false}).limit(300);
+ const r=await db.from("admin_notifications").select("*").eq("is_read",false).in("source_table",["withdrawals","kyc_submissions","support_chat_messages","support_messages","orders"]).order("created_at",{ascending:false}).limit(300);
  if(r.error)throw r.error;if(!pageIs("notifications",version))return;
  const rows=r.data||[];
  const html=rows.length?rows.map(n=>{
