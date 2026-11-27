@@ -1281,7 +1281,7 @@ async function withdrawalsPage(version=pageVersion){
  if(!pageIs("withdrawals",version))return;
  const r=await db.from("withdrawals").select("*").order("created_at",{ascending:false}).limit(1000);
  if(r.error)throw r.error;if(!pageIs("withdrawals",version))return;
- const rows=r.data||[];
+ const rows=(r.data||[]).filter(x=>x.customer_id);
  const customerIds=[...new Set(rows.map(x=>String(x.customer_id||"")).filter(Boolean))];
  let profileRows=[];
  if(customerIds.length){
