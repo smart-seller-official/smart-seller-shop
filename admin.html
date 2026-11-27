@@ -276,84 +276,183 @@ async function login(){
  finally{b.disabled=false}
 }
 async function logout(){if(db)await db.auth.signOut();location.reload()}
+let adminAlertAudioContext=null;
 let adminKnownNotificationIds=null;
-let adminKnownSupportMessageIds=null;
-let adminSpeechQueue=[];
-let adminSpeechBusy=false;
 function unlockAdminNotificationSound(){
- try{if("speechSynthesis" in window)window.speechSynthesis.resume();}
- catch(e){console.warn("Notification voice unavailable:",e.message)}
+ try{
+  const AudioContextClass=window.AudioContext||window.webkitAudioContext;
+  if(!AudioContextClass)return;
+  if(!adminAlertAudioContext)adminAlertAudioContext=new AudioContextClass();
+  if(adminAlertAudioContext.state==="suspended")adminAlertAudioContext.resume().catch(()=>{});
+ }catch(e){console.warn("Notification sound unavailable:",e.message)}
 }
-document.addEventListener("pointerdown",unlockAdminNotificationSound);
-document.addEventListener("keydown",unlockAdminNotificationSound);
-function announceAdminNotification(customer,page,detail){
- const name=String(customer||"A customer").trim();
- const pageName=String(page||"Notifications").trim();
- const extra=String(detail||"").trim();
- const phrase=extra?"New notification. "+name+". "+extra+". Open "+pageName+" page.":"New notification from "+name+". Open "+pageName+" page.";
- adminSpeechQueue.push(phrase);processAdminSpeechQueue();
-}
-function processAdminSpeechQueue(){
- if(adminSpeechBusy||!adminSpeechQueue.length||!("speechSynthesis" in window))return;
- const phrase=adminSpeechQueue.shift(),utterance=new SpeechSynthesisUtterance(phrase);
- utterance.lang="en-US";utterance.rate=0.92;utterance.pitch=1;utterance.volume=1;adminSpeechBusy=true;
- utterance.onend=utterance.onerror=()=>{adminSpeechBusy=false;setTimeout(processAdminSpeechQueue,250);};
- try{window.speechSynthesis.speak(utterance);}
- catch(e){adminSpeechBusy=false;console.warn("Notification voice error:",e.message);setTimeout(processAdminSpeechQueue,250);}
-}
-function notificationPageName(source){
- const pages={profiles:"Customer Management",customer_first_login:"Customer Management",support_chat_messages:"Customer Service",support_messages:"Customer Service",withdrawals:"Withdrawals",kyc_submissions:"KYC",orders:"Orders",customer_products:"Customer Products",product_requests:"Customer Products",wallet_transactions:"Wallet",payment_submissions:"Wallet",premium_purchases:"Premium Packages"};
- return pages[String(source||"").toLowerCase()]||"Notifications";
+document.addEventListener("pointerdown",unlockAdminNotificationSound,{once:true});
+document.addEventListener("keydown",unlockAdminNotificationSound,{once:true});
+function playAdminNotificationSound(){
+ try{
+  if(!adminAlertAudioContext||adminAlertAudioContext.state!=="running")return;
+  const ctx=adminAlertAudioContext;
+  // Clear, bright three-note message chime.
+  [{delay:0,frequency:784,duration:0.19},{delay:0.18,frequency:988,duration:0.19},{delay:0.38,frequency:1318,duration:0.30}].forEach(note=>{
+   const oscillator=ctx.createOscillator(),gain=ctx.createGain();
+   oscillator.type="triangle";
+   oscillator.frequency.setValueAtTime(note.frequency,ctx.currentTime+note.delay);
+   gain.gain.setValueAtTime(0.0001,ctx.currentTime+note.delay);
+   gain.gain.exponentialRampToValueAtTime(0.20,ctx.currentTime+note.delay+0.025);
+   gain.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+note.delay+note.duration);
+   oscillator.connect(gain);gain.connect(ctx.destination);
+   oscillator.start(ctx.currentTime+note.delay);oscillator.stop(ctx.currentTime+note.delay+note.duration+0.01);
+  });
+ }catch(e){console.warn("Notification sound error:",e.message)}
 }
 async function refreshAdminBadges(){
  if(!db)return;
  try{
   const results=await Promise.all([
    db.from("orders").select("id,status").limit(1000),
-   db.from("support_chat_messages").select("id,customer_id,sender,sender_role,created_at,read_at").order("created_at",{ascending:false}).limit(500),
+   db.from("support_chat_messages").select("customer_id,sender,sender_role,created_at,read_at").order("created_at",{ascending:false}).limit(500),
    db.from("kyc_submissions").select("id,status").limit(1000),
    db.from("withdrawals").select("id,status").limit(1000),
    db.from("profiles").select("id").limit(1000),
    db.from("admin_notifications").select("id",{count:"exact",head:true}).eq("is_read",false).in("source_table",["withdrawals","kyc_submissions","support_chat_messages","support_messages"]),
-   db.from("admin_notifications").select("id,customer_id,source_table,title,message").eq("is_read",false).order("created_at",{ascending:false}).limit(200),
+   db.from("admin_notifications").select("id").eq("is_read",false).in("source_table",["withdrawals","kyc_submissions","support_chat_messages","support_messages"]).order("created_at",{ascending:false}).limit(100),
    db.from("admin_notifications").select("id",{count:"exact",head:true}).eq("is_read",false).eq("source_table","customer_first_login"),
    db.from("premium_purchases").select("id,status").eq("status","pending").limit(500)
   ]);
   if(results[0].error)throw results[0].error;if(results[1].error)throw results[1].error;if(results[2].error)throw results[2].error;if(results[3].error)throw results[3].error;if(results[4].error)throw results[4].error;if(results[5].error)throw results[5].error;if(results[6].error)throw results[6].error;if(results[7].error)throw results[7].error;if(results[8].error)throw results[8].error;
-  const supportMessagesForSound=results[1].data||[];
-  const customerMessageIds=supportMessagesForSound
-   .filter(m=>String(m.sender_role||m.sender||"").toLowerCase()==="customer"&&m.id)
-   .map(m=>String(m.id));
-  if(adminKnownSupportMessageIds===null)adminKnownSupportMessageIds=new Set(customerMessageIds);
-   else{
-    const newCustomerMessages=customerMessageIds.filter(id=>!adminKnownSupportMessageIds.has(id));
-    if(newCustomerMessages.length){
-     const freshMessages=supportMessagesForSound.filter(m=>newCustomerMessages.includes(String(m.id)));
-     const announcedCustomers=new Set();
-     freshMessages.forEach(m=>{
-      const cid=String(m.customer_id||"");
-      if(!announcedCustomers.has(cid)){
-       announcedCustomers.add(cid);
-       announceAdminNotification(customerName(cid),"Customer Service","You have a new customer message");
-      }
-     });
-    }
-    customerMessageIds.forEach(id=>adminKnownSupportMessageIds.add(id));
-    if(adminKnownSupportMessageIds.size>1000)adminKnownSupportMessageIds=new Set(customerMessageIds);
-   }
-   const notificationRows=results[6].data||[];
-   const notificationIds=notificationRows.map(n=>String(n.id));
-   if(adminKnownNotificationIds===null)adminKnownNotificationIds=new Set(notificationIds);
-   else{
-    const newNotificationIds=notificationIds.filter(id=>!adminKnownNotificationIds.has(id));
-    if(newNotificationIds.length){
-     notificationRows.filter(n=>newNotificationIds.includes(String(n.id))).forEach(n=>{
-      const customer=n.customer_id?customerName(n.customer_id):"A customer";
-      announceAdminNotification(customer,notificationPageName(n.source_table),n.title||n.message||"New request");
-     });
-    }
-    notificationIds.forEach(id=>adminKnownNotificationIds.add(id));
-    if(adminKnownNotificationIds.size>500)adminKnownNotificationIds=new Set(notificationIds);
+  const notificationIds=(results[6].data||[]).map(n=>String(n.id));
+  if(adminKnownNotificationIds===null)adminKnownNotificationIds=new Set(notificationIds);
+  else{
+   const newNotificationIds=notificationIds.filter(id=>!adminKnownNotificationIds.has(id));
+   if(newNotificationIds.length)playAdminNotificationSound();
+   notificationIds.forEach(id=>adminKnownNotificationIds.add(id));
+   if(adminKnownNotificationIds.size>500)adminKnownNotificationIds=new Set(notificationIds);
+  }
+  const pending=(results[0].data||[]).filter(o=>["pending","pickup","picked_up","picked up"].includes(String(o.status||"").toLowerCase())).length;
+  const waiting=(results[1].data||[]).filter(m=>
+   String(m.sender_role||m.sender||"").toLowerCase()==="customer"&&!m.read_at
+  ).length;
+  const kycPending=(results[2].data||[]).filter(x=>String(x.status||"").trim().toLowerCase()==="pending").length;
+  const withdrawalsPending=(results[3].data||[]).filter(x=>String(x.status||"").trim().toLowerCase()==="pending").length;
+  const newCustomerCount=Number(results[7].count||0);
+  const ob=document.getElementById("adminOrdersBadge"),mb=document.getElementById("adminMessagesBadge"),kb=document.getElementById("adminKycBadge"),wb=document.getElementById("adminWithdrawalsBadge"),cb=document.getElementById("adminCustomersBadge"),nb=document.getElementById("adminNotificationsBadge"),pb=document.getElementById("adminPremiumBadge");
+  if(ob){ob.textContent="";ob.style.display="none";}
+  if(mb){mb.textContent=waiting?String(waiting):"";mb.style.display=waiting?"inline-block":"none";}
+  if(kb){kb.textContent=kycPending?String(kycPending):"";kb.style.display=kycPending?"inline-block":"none";}
+  if(wb){wb.textContent=withdrawalsPending?String(withdrawalsPending):"";wb.style.display=withdrawalsPending?"inline-block":"none";}
+  if(cb){cb.textContent=newCustomerCount?String(newCustomerCount):"";cb.style.display=newCustomerCount?"inline-block":"none";}
+  const unreadNotifications=Number(results[5].count||0);
+  if(nb){nb.textContent=unreadNotifications?String(unreadNotifications):"";nb.style.display=unreadNotifications?"inline-block":"none";}
+  const premiumPending=(results[8].data||[]).length;if(pb){pb.textContent=premiumPending?String(premiumPending):"";pb.style.display=premiumPending?"inline-block":"none";}
+ }catch(e){console.warn("Admin notification counts:",e.message)}
+}
+
+async function start(){
+ document.getElementById("login").style.display="none";
+ document.getElementById("layout").style.display="flex";
+ const allowedAdminPages=["dashboard","products","customer_products","orders","wallet_transactions","premium_purchases","withdrawals","kyc_submissions","customers","support_messages","notifications","credit_score_history"];
+ let savedAdminPage="dashboard";
+ try{const saved=localStorage.getItem("smartSellerAdminLastPage");if(allowedAdminPages.includes(saved))savedAdminPage=saved;}catch(e){}
+ const savedButton=[...document.querySelectorAll("aside button")].find(b=>(b.getAttribute("onclick")||"").includes("'"+savedAdminPage+"'"));
+ await go(savedAdminPage,savedButton||document.querySelector("aside button"));
+ await refreshAdminBadges();
+ if(!window.adminBadgeTimer)window.adminBadgeTimer=setInterval(()=>{if(!document.hidden)refreshAdminBadges();},30000);
+}
+async function check(){
+ if(!db)return;
+ try{
+  const s=await db.auth.getSession();if(!s.data.session)return;
+  const a=await db.from("admin_users").select("user_id").eq("user_id",s.data.session.user.id).maybeSingle();
+  if(a.error)throw a.error;
+  if(a.data)await start();else await db.auth.signOut();
+ }catch(e){document.getElementById("loginError").textContent=e.message}
+}
+async function loadCustomers(){
+ const r=await db.from("profiles").select("*").limit(1000);
+ if(r.error)throw r.error;
+ const admins=await db.from("admin_users").select("user_id");
+ if(admins.error)throw admins.error;
+ const adminIds=new Set((admins.data||[]).map(a=>String(a.user_id)));
+ const {data:{user:adminUser}}=await db.auth.getUser();
+ if(adminUser)adminIds.add(String(adminUser.id));
+ customers=(r.data||[]).filter(c=>!adminIds.has(String(c.id)));
+}
+let totalProductCount=0;
+async function loadProducts(){
+ const r=await db.from("products").select("*",{count:"exact"}).limit(1000);
+ if(r.error)throw r.error;
+ products=r.data||[];
+ totalProductCount=Number.isFinite(r.count)?r.count:products.length;
+}
+function customerName(id){
+ const c=customers.find(x=>String(x.id)===String(id));
+ return c?(c.full_name||c.email||"Customer"):"Customer";
+}
+function customerEmail(id){
+ return customers.find(x=>String(x.id)===String(id))?.email||"";
+}
+function customerLink(id){
+ const c=customers.find(x=>String(x.id)===String(id));
+ const details=[c?.full_name,c?.email].filter(v=>String(v||"").trim()!=="");
+ return `<span class="click-customer" onclick="openCustomerProfile('${esc(id)}')">${details.map(esc).join("<br>")||"Customer"}</span>`;
+}
+function renderSimple(data){
+ if(!data?.length)return "No records found";
+ const keys=Object.keys(data[0]);
+ return "<div class='tablewrap'><table><tr>"+keys.map(k=>"<th>"+esc(k)+"</th>").join("")+"</tr>"+
+ data.map(x=>"<tr>"+keys.map(k=>"<td>"+esc(typeof x[k]==="object"?JSON.stringify(x[k]):x[k])+"</td>").join("")+"</tr>").join("")+"</table></div>";
+}
+function renderCustomerLinkedTable(data){
+ if(!data?.length)return "No records found";
+ const keys=Object.keys(data[0]);
+ return "<div class='tablewrap'><table><tr>"+keys.map(k=>"<th>"+esc(k.replaceAll("_"," "))+"</th>").join("")+"</tr>"+
+ data.map(x=>"<tr>"+keys.map(k=>{
+  if(k==="customer_id"&&x[k])return "<td>"+customerLink(x[k])+"</td>";
+  const v=x[k];return "<td>"+esc(v===null?"":typeof v==="object"?JSON.stringify(v):v)+"</td>";
+ }).join("")+"</tr>").join("")+"</table></div>";
+}
+
+/* CUSTOMER PROFILE - OTHER ADMIN SECTIONS */
+function customerProfilePhoto(p){
+ const url=String(p?.avatar||p?.avatar_url||"").trim();
+ return url?'<img class="admin-customer-avatar" src="'+esc(url)+'" alt="Customer profile picture">':"";
+}
+function customerProfileDetails(p){
+ const fields=[["FULL NAME",p?.full_name],["EMAIL",p?.email],["PHONE",p?.phone]]
+  .filter(([label,value])=>String(value??"").trim()!=="")
+  .map(([label,value])=>`<div class="profile-field"><b>${label}</b><p>${esc(value)}</p></div>`).join("");
+ return fields?`<div class="profile-grid">${fields}</div>`:"<p class='muted'>No customer-provided profile details.</p>";
+}
+async function openCustomerProfile(id){
+ const modal=document.getElementById("customerProfileModal");
+ const box=document.getElementById("customerProfileContent");
+ modal.style.display="block";box.innerHTML="Loading customer details and history...";
+ try{
+  const requests=await Promise.all([
+   db.from("profiles").select("*").eq("id",id).maybeSingle(),
+   db.from("orders").select("*").eq("customer_id",id).order("created_at",{ascending:false}),
+   db.from("withdrawals").select("*").eq("customer_id",id).order("created_at",{ascending:false}),
+   db.from("kyc_submissions").select("*").eq("customer_id",id).order("created_at",{ascending:false}),
+   db.from("wallet_transactions").select("*").eq("customer_id",id).order("created_at",{ascending:false}),
+   db.from("customer_products").select("*").eq("customer_id",id).order("created_at",{ascending:false}),
+   db.from("credit_score_history").select("*").eq("customer_id",id).order("created_at",{ascending:false}),
+   db.from("support_chat_messages").select("*").eq("customer_id",id).order("created_at",{ascending:true})
+  ]);
+  const [pr,or,wr,kr,wallet,cp,credit,chat]=requests;
+  if(pr.error)throw pr.error;
+  const p=pr.data||{};
+
+  const history=(result,title)=>{
+   if(result.error)return `<h3>${title}</h3><p class="error">History load error: ${esc(result.error.message)}</p>`;
+   const rows=result.data||[];
+   if(title==="Withdrawal Requests"){
+    const withdrawalRows=rows.map(w=>`<div class="kyc-row">
+     <span>${money(w.amount)} · ${esc(w.method||"Not available")}</span>
+     <b>${esc(w.status||"Pending")}</b>
+     <span class="muted">${esc(w.created_at||"")}</span>
+     ${String(w.status||"").toLowerCase().trim()==="pending"?`<button class="green" onclick="withdrawStatus('${esc(w.id)}','completed','${esc(id)}')">Approve</button><button class="red" onclick="withdrawStatus('${esc(w.id)}','rejected','${esc(id)}')">Reject</button>`:""}
+    </div>`).join("");
+    return `<h3>${title} (${rows.length})</h3>${withdrawalRows||"No withdrawal requests."}`;
    }
    return `<h3>${title} (${rows.length})</h3>${renderSimple(rows)}`;
   };
