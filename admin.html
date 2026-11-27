@@ -1664,9 +1664,9 @@ async function openSupportChat(customerId,preserveDraft=false){
  const renderedMessages=await Promise.all(messages.map(async m=>{
    const role=String(m.sender_role||m.sender||"customer").toLowerCase();const admin=role==="admin";let imageHtml="";
    if(m.image_path){const signed=await db.storage.from("support-chat-images").createSignedUrl(m.image_path,3600);if(signed.error)throw signed.error;const url=esc(signed.data.signedUrl);imageHtml=`<a href="${url}" target="_blank" rel="noopener"><img style="display:block;max-width:230px;max-height:230px;width:auto;height:auto;object-fit:contain;border-radius:10px;margin-top:7px" src="${url}" alt="Customer Service attachment"></a>`;}
-   const ticks=admin?`<small class="chat-read-ticks" title="\${m.read_at?"Seen by customer":"Sent"}" style="color:\${m.read_at?"#1685e8":"#94a3b8"}">✓✓</small>`:"";
-   const editButton=admin?`<button type="button" class="chat-edit-button" onclick="editAdminSupportMessage('\${esc(m.id)}')">Edit</button>`:"";
-   return `<div class="\${admin?"chat-message":"chat-reply"}">\${m.message?`<p>\${esc(m.message)}</p>`:""}\${imageHtml}<div class="chat-message-footer"><small class="chat-time">\${m.created_at?new Date(m.created_at).toLocaleString():""}</small>\${ticks}\${editButton}</div></div>`;
+   const ticks=admin?`<small class="chat-read-ticks" title="${m.read_at?"Seen by customer":"Sent"}" style="color:${m.read_at?"#1685e8":"#94a3b8"}">✓✓</small>`:"";
+   const editButton=admin?`<button type="button" class="chat-edit-button" onclick="editAdminSupportMessage('${esc(m.id)}')">Edit</button>`:"";
+   return `<div class="${admin?"chat-message":"chat-reply"}">${m.message?`<p>${esc(m.message)}</p>`:""}${imageHtml}<div class="chat-message-footer"><small class="chat-time">${m.created_at?new Date(m.created_at).toLocaleString():""}</small>${ticks}${editButton}</div></div>`;
   }));
   box.innerHTML=renderedMessages.join("")||"No messages.";
  const restoreChatScroll=()=>{
