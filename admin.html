@@ -292,15 +292,16 @@ function playAdminNotificationSound(){
  try{
   if(!adminAlertAudioContext||adminAlertAudioContext.state!=="running")return;
   const ctx=adminAlertAudioContext;
-  [0,0.22,0.44].forEach((delay,index)=>{
+  // Clear, bright three-note message chime.
+  [{delay:0,frequency:784,duration:0.19},{delay:0.18,frequency:988,duration:0.19},{delay:0.38,frequency:1318,duration:0.30}].forEach(note=>{
    const oscillator=ctx.createOscillator(),gain=ctx.createGain();
-   oscillator.type="sine";
-   oscillator.frequency.value=index===1?1046:880;
-   gain.gain.setValueAtTime(0.0001,ctx.currentTime+delay);
-   gain.gain.exponentialRampToValueAtTime(0.16,ctx.currentTime+delay+0.025);
-   gain.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+delay+0.16);
+   oscillator.type="triangle";
+   oscillator.frequency.setValueAtTime(note.frequency,ctx.currentTime+note.delay);
+   gain.gain.setValueAtTime(0.0001,ctx.currentTime+note.delay);
+   gain.gain.exponentialRampToValueAtTime(0.20,ctx.currentTime+note.delay+0.025);
+   gain.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+note.delay+note.duration);
    oscillator.connect(gain);gain.connect(ctx.destination);
-   oscillator.start(ctx.currentTime+delay);oscillator.stop(ctx.currentTime+delay+0.17);
+   oscillator.start(ctx.currentTime+note.delay);oscillator.stop(ctx.currentTime+note.delay+note.duration+0.01);
   });
  }catch(e){console.warn("Notification sound error:",e.message)}
 }
