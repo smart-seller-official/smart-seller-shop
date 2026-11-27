@@ -105,6 +105,10 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere}
 .admin-chat-screen .chat-reply{align-self:flex-start;background:#fff;color:#172943;border:1px solid #e5eaf1;border-bottom-left-radius:5px}
 .admin-chat-screen .chat-message p,.admin-chat-screen .chat-reply p{margin:0;white-space:pre-wrap;line-height:1.4}
 .admin-chat-screen .chat-time{display:block;color:#718096;font-size:10px;margin-top:5px;text-align:right}
+.admin-chat-screen .chat-message-footer{display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-top:5px}
+.admin-chat-screen .chat-message-footer .chat-time{margin:0}
+.admin-chat-screen .chat-read-ticks{font-size:13px;font-weight:800;line-height:1}
+.admin-chat-screen .chat-edit-button{padding:2px 7px;margin:0;background:#65738a;color:#fff;font-size:10px;border-radius:6px}
 .admin-chat-screen .chat-composer{flex:0 0 auto;display:flex;align-items:flex-end;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #e2e8f0}
 .admin-chat-screen .chat-composer textarea{flex:1;min-height:42px;max-height:110px;resize:none;margin:0;border-radius:22px;padding:11px 15px;background:#f1f5f9;border:0}
 .admin-chat-screen .chat-composer button{display:inline-flex!important;visibility:visible!important;align-items:center;justify-content:center;width:auto!important;min-width:76px;height:44px;flex:0 0 auto;border-radius:22px;padding:0 14px;font-size:14px;font-weight:700;white-space:nowrap;margin:0!important;position:relative;z-index:2}.admin-chat-screen .chat-composer button.attach-picture{background:#65738a!important;color:#fff!important;min-width:94px}.admin-chat-screen .chat-composer button.send-message{background:#159b79!important;color:#fff!important;min-width:82px}.admin-chat-screen .chat-composer input[type=file][hidden]{display:none!important}
@@ -1660,7 +1664,9 @@ async function openSupportChat(customerId,preserveDraft=false){
  const renderedMessages=await Promise.all(messages.map(async m=>{
    const role=String(m.sender_role||m.sender||"customer").toLowerCase();const admin=role==="admin";let imageHtml="";
    if(m.image_path){const signed=await db.storage.from("support-chat-images").createSignedUrl(m.image_path,3600);if(signed.error)throw signed.error;const url=esc(signed.data.signedUrl);imageHtml=`<a href="${url}" target="_blank" rel="noopener"><img style="display:block;max-width:230px;max-height:230px;width:auto;height:auto;object-fit:contain;border-radius:10px;margin-top:7px" src="${url}" alt="Customer Service attachment"></a>`;}
-   return `<div class="${admin?"chat-message":"chat-reply"}">${m.message?`<p>${esc(m.message)}</p>`:""}${imageHtml}<small class="chat-time">${m.created_at?new Date(m.created_at).toLocaleString():""}</small></div>`;
+   const ticks=admin?`<small class="chat-read-ticks" title="\${m.read_at?"Seen by customer":"Sent"}" style="color:\${m.read_at?"#1685e8":"#94a3b8"}">✓✓</small>`:"";
+   const editButton=admin?`<button type="button" class="chat-edit-button" onclick="editAdminSupportMessage('\${esc(m.id)}')">Edit</button>`:"";
+   return `<div class="\${admin?"chat-message":"chat-reply"}">\${m.message?`<p>\${esc(m.message)}</p>`:""}\${imageHtml}<div class="chat-message-footer"><small class="chat-time">\${m.created_at?new Date(m.created_at).toLocaleString():""}</small>\${ticks}\${editButton}</div></div>`;
   }));
   box.innerHTML=renderedMessages.join("")||"No messages.";
  const restoreChatScroll=()=>{
@@ -1685,6 +1691,35 @@ async function openSupportChat(customerId,preserveDraft=false){
   }catch(e){note("Read status update error: "+e.message,true);}
  }
 }
+
+async function editAdminSupportMessage(messageId){
+ const original=supportMessages.find(m=>String(m.id)===String(messageId));
+ if(!original||String(original.sender_role||original.sender||"").toLowerCase()!=="admin")return note("Sirf admin ke apne messages edit ho sakte hain.",true);
+ const updatedMessage=window.prompt("Edit your message:",String(original.message||""));
+ if(updatedMessage===null)return;
+ const cleanMessage=updatedMessage.trim();
+ if(!cleanMessage&&!original.image_path)return note("Message khali nahi ho sakta.",true);
+ if(cleanMessage===String(original.message||"").trim())return;
+ try{
+  const result=await db.from("support_chat_messages")
+   .update({message:cleanMessage})
+   .eq("id",original.id)
+   .eq("customer_id",original.customer_id)
+   .or("sender_role.eq.admin,sender.eq.admin")
+   .select("id,message")
+   .maybeSingle();
+  if(result.error)throw result.error;
+  if(!result.data)throw new Error("Message edit ki permission nahi mili. Database policy admin UPDATE allow nahi kar rahi.");
+  supportMessages=supportMessages.map(m=>String(m.id)===String(messageId)?{...m,message:result.data.message}:m);
+  supportLastSignature=JSON.stringify(supportMessages);
+  makeSupportGroups();
+  await openSupportChat(original.customer_id,true);
+  note("Message successfully edit ho gaya.");
+ }catch(e){
+  note("Message edit error: "+e.message,true);
+ }
+}
+
 async function sendReply(){
  const customerId=activeSupportCustomerId;
  const el=document.getElementById("supportReply"),btn=document.getElementById("sendSupportReply");
