@@ -284,26 +284,31 @@ function unlockAdminNotificationSound(){
   const AudioContextClass=window.AudioContext||window.webkitAudioContext;
   if(AudioContextClass){
    if(!adminAlertAudioContext)adminAlertAudioContext=new AudioContextClass();
-   if(adminAlertAudioContext.state==="suspended")adminAlertAudioContext.resume().catch(()=>{});
+   if(adminAlertAudioContext.state!=="running")adminAlertAudioContext.resume().catch(e=>console.warn("Notification audio resume:",e.message));
   }
   adminSpeechUnlocked=true;
  }catch(e){console.warn("Notification audio unavailable:",e.message)}
 }
-document.addEventListener("pointerdown",unlockAdminNotificationSound,{once:true});
-document.addEventListener("keydown",unlockAdminNotificationSound,{once:true});
-function playAdminNotificationSound(){
+document.addEventListener("pointerdown",unlockAdminNotificationSound);
+document.addEventListener("keydown",unlockAdminNotificationSound);
+async function playAdminNotificationSound(){
  try{
-  if(!adminAlertAudioContext||adminAlertAudioContext.state!=="running")return;
+  const AudioContextClass=window.AudioContext||window.webkitAudioContext;
+  if(!AudioContextClass)return;
+  if(!adminAlertAudioContext)adminAlertAudioContext=new AudioContextClass();
   const ctx=adminAlertAudioContext;
+  if(ctx.state!=="running")await ctx.resume();
+  if(ctx.state!=="running"){console.warn("Notification sound skipped: audio context is "+ctx.state);return;}
+  const startAt=ctx.currentTime+0.03;
   [{delay:0,frequency:784,duration:0.19},{delay:0.18,frequency:988,duration:0.19},{delay:0.38,frequency:1318,duration:0.30}].forEach(note=>{
    const oscillator=ctx.createOscillator(),gain=ctx.createGain();
    oscillator.type="triangle";
-   oscillator.frequency.setValueAtTime(note.frequency,ctx.currentTime+note.delay);
-   gain.gain.setValueAtTime(0.0001,ctx.currentTime+note.delay);
-   gain.gain.exponentialRampToValueAtTime(0.20,ctx.currentTime+note.delay+0.025);
-   gain.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+note.delay+note.duration);
+   oscillator.frequency.setValueAtTime(note.frequency,startAt+note.delay);
+   gain.gain.setValueAtTime(0.0001,startAt+note.delay);
+   gain.gain.exponentialRampToValueAtTime(0.20,startAt+note.delay+0.025);
+   gain.gain.exponentialRampToValueAtTime(0.0001,startAt+note.delay+note.duration);
    oscillator.connect(gain);gain.connect(ctx.destination);
-   oscillator.start(ctx.currentTime+note.delay);oscillator.stop(ctx.currentTime+note.delay+note.duration+0.01);
+   oscillator.start(startAt+note.delay);oscillator.stop(startAt+note.delay+note.duration+0.01);
   });
  }catch(e){console.warn("Notification sound error:",e.message)}
 }
