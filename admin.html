@@ -345,7 +345,7 @@ async function refreshAdminBadges(){
    db.from("withdrawals").select("id,status").limit(1000),
    db.from("profiles").select("id").limit(1000),
    db.from("admin_notifications").select("id",{count:"exact",head:true}).eq("is_read",false).in("source_table",notificationSources),
-   db.from("admin_notifications").select("id,customer_id,title,message,source_table,created_at").eq("is_read",false).in("source_table",notificationSources).order("created_at",{ascending:true}).limit(100),
+   db.from("admin_notifications").select("id,customer_id,title,message,source_table,created_at").eq("is_read",false).in("source_table",notificationSources).order("created_at",{ascending:false}).limit(100),
    db.from("admin_notifications").select("id",{count:"exact",head:true}).eq("is_read",false).eq("source_table","customer_first_login"),
    db.from("premium_purchases").select("id,status").eq("status","pending").limit(500)
   ]);
