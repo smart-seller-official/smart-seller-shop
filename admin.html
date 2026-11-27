@@ -278,13 +278,16 @@ async function login(){
 async function logout(){if(db)await db.auth.signOut();location.reload()}
 let adminAlertAudioContext=null;
 let adminKnownNotificationIds=null;
+let adminSpeechUnlocked=false;
 function unlockAdminNotificationSound(){
  try{
   const AudioContextClass=window.AudioContext||window.webkitAudioContext;
-  if(!AudioContextClass)return;
-  if(!adminAlertAudioContext)adminAlertAudioContext=new AudioContextClass();
-  if(adminAlertAudioContext.state==="suspended")adminAlertAudioContext.resume().catch(()=>{});
- }catch(e){console.warn("Notification sound unavailable:",e.message)}
+  if(AudioContextClass){
+   if(!adminAlertAudioContext)adminAlertAudioContext=new AudioContextClass();
+   if(adminAlertAudioContext.state==="suspended")adminAlertAudioContext.resume().catch(()=>{});
+  }
+  adminSpeechUnlocked=true;
+ }catch(e){console.warn("Notification audio unavailable:",e.message)}
 }
 document.addEventListener("pointerdown",unlockAdminNotificationSound,{once:true});
 document.addEventListener("keydown",unlockAdminNotificationSound,{once:true});
@@ -292,7 +295,6 @@ function playAdminNotificationSound(){
  try{
   if(!adminAlertAudioContext||adminAlertAudioContext.state!=="running")return;
   const ctx=adminAlertAudioContext;
-  // Clear, bright three-note message chime.
   [{delay:0,frequency:784,duration:0.19},{delay:0.18,frequency:988,duration:0.19},{delay:0.38,frequency:1318,duration:0.30}].forEach(note=>{
    const oscillator=ctx.createOscillator(),gain=ctx.createGain();
    oscillator.type="triangle";
@@ -305,26 +307,58 @@ function playAdminNotificationSound(){
   });
  }catch(e){console.warn("Notification sound error:",e.message)}
 }
+function announceAdminNotification(notification){
+ try{
+  if(!("speechSynthesis" in window)||!window.SpeechSynthesisUtterance)return;
+  const source=String(notification.source_table||"");
+  const pageNames={
+   support_chat_messages:"Customer Service",
+   support_messages:"Customer Service",
+   withdrawals:"Withdrawals",
+   kyc_submissions:"KYC",
+   orders:"Orders"
+  };
+  const page=pageNames[source];
+  if(!page)return;
+  const name=notification.customer_id?customerName(notification.customer_id):"A customer";
+  const sentence=source==="orders"
+   ? "New notification from "+name+". Customer picked up an order. Open Orders page."
+   : source==="support_chat_messages"||source==="support_messages"
+    ? "New message from "+name+". Open Customer Service page."
+    : "New notification from "+name+". Open "+page+" page.";
+  const utterance=new SpeechSynthesisUtterance(sentence);
+  utterance.lang="en-US";
+  utterance.rate=0.94;
+  utterance.pitch=1;
+  utterance.volume=1;
+  window.speechSynthesis.speak(utterance);
+ }catch(e){console.warn("Notification voice unavailable:",e.message)}
+}
 async function refreshAdminBadges(){
  if(!db)return;
  try{
+  const notificationSources=["withdrawals","kyc_submissions","support_chat_messages","support_messages","orders"];
   const results=await Promise.all([
    db.from("orders").select("id,status").limit(1000),
    db.from("support_chat_messages").select("customer_id,sender,sender_role,created_at,read_at").order("created_at",{ascending:false}).limit(500),
    db.from("kyc_submissions").select("id,status").limit(1000),
    db.from("withdrawals").select("id,status").limit(1000),
    db.from("profiles").select("id").limit(1000),
-   db.from("admin_notifications").select("id",{count:"exact",head:true}).eq("is_read",false).in("source_table",["withdrawals","kyc_submissions","support_chat_messages","support_messages"]),
-   db.from("admin_notifications").select("id").eq("is_read",false).in("source_table",["withdrawals","kyc_submissions","support_chat_messages","support_messages"]).order("created_at",{ascending:false}).limit(100),
+   db.from("admin_notifications").select("id",{count:"exact",head:true}).eq("is_read",false).in("source_table",notificationSources),
+   db.from("admin_notifications").select("id,customer_id,title,message,source_table,created_at").eq("is_read",false).in("source_table",notificationSources).order("created_at",{ascending:true}).limit(100),
    db.from("admin_notifications").select("id",{count:"exact",head:true}).eq("is_read",false).eq("source_table","customer_first_login"),
    db.from("premium_purchases").select("id,status").eq("status","pending").limit(500)
   ]);
-  if(results[0].error)throw results[0].error;if(results[1].error)throw results[1].error;if(results[2].error)throw results[2].error;if(results[3].error)throw results[3].error;if(results[4].error)throw results[4].error;if(results[5].error)throw results[5].error;if(results[6].error)throw results[6].error;if(results[7].error)throw results[7].error;if(results[8].error)throw results[8].error;
-  const notificationIds=(results[6].data||[]).map(n=>String(n.id));
+  if(results.some(r=>r.error))throw results.find(r=>r.error).error;
+  const notifications=results[6].data||[];
+  const notificationIds=notifications.map(n=>String(n.id));
   if(adminKnownNotificationIds===null)adminKnownNotificationIds=new Set(notificationIds);
   else{
-   const newNotificationIds=notificationIds.filter(id=>!adminKnownNotificationIds.has(id));
-   if(newNotificationIds.length)playAdminNotificationSound();
+   const newNotifications=notifications.filter(n=>!adminKnownNotificationIds.has(String(n.id)));
+   if(newNotifications.length){
+    playAdminNotificationSound();
+    newNotifications.forEach(announceAdminNotification);
+   }
    notificationIds.forEach(id=>adminKnownNotificationIds.add(id));
    if(adminKnownNotificationIds.size>500)adminKnownNotificationIds=new Set(notificationIds);
   }
