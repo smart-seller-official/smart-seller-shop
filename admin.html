@@ -278,6 +278,7 @@ async function login(){
 async function logout(){if(db)await db.auth.signOut();location.reload()}
 let adminAlertAudioContext=null;
 let adminKnownNotificationIds=null;
+let adminKnownSupportMessageIds=null;
 function unlockAdminNotificationSound(){
  try{
   const AudioContextClass=window.AudioContext||window.webkitAudioContext;
@@ -286,8 +287,8 @@ function unlockAdminNotificationSound(){
   if(adminAlertAudioContext.state==="suspended")adminAlertAudioContext.resume().catch(()=>{});
  }catch(e){console.warn("Notification sound unavailable:",e.message)}
 }
-document.addEventListener("pointerdown",unlockAdminNotificationSound,{once:true});
-document.addEventListener("keydown",unlockAdminNotificationSound,{once:true});
+document.addEventListener("pointerdown",unlockAdminNotificationSound);
+document.addEventListener("keydown",unlockAdminNotificationSound);
 function playAdminNotificationSound(){
  try{
   if(!adminAlertAudioContext||adminAlertAudioContext.state!=="running")return;
@@ -310,16 +311,27 @@ async function refreshAdminBadges(){
  try{
   const results=await Promise.all([
    db.from("orders").select("id,status").limit(1000),
-   db.from("support_chat_messages").select("customer_id,sender,sender_role,created_at,read_at").order("created_at",{ascending:false}).limit(500),
+   db.from("support_chat_messages").select("id,customer_id,sender,sender_role,created_at,read_at").order("created_at",{ascending:false}).limit(500),
    db.from("kyc_submissions").select("id,status").limit(1000),
    db.from("withdrawals").select("id,status").limit(1000),
    db.from("profiles").select("id").limit(1000),
    db.from("admin_notifications").select("id",{count:"exact",head:true}).eq("is_read",false).in("source_table",["withdrawals","kyc_submissions","support_chat_messages","support_messages"]),
-   db.from("admin_notifications").select("id").eq("is_read",false).in("source_table",["withdrawals","kyc_submissions","support_chat_messages","support_messages"]).order("created_at",{ascending:false}).limit(100),
+   db.from("admin_notifications").select("id").eq("is_read",false).in("source_table",["withdrawals","kyc_submissions"]).order("created_at",{ascending:false}).limit(100),
    db.from("admin_notifications").select("id",{count:"exact",head:true}).eq("is_read",false).eq("source_table","customer_first_login"),
    db.from("premium_purchases").select("id,status").eq("status","pending").limit(500)
   ]);
   if(results[0].error)throw results[0].error;if(results[1].error)throw results[1].error;if(results[2].error)throw results[2].error;if(results[3].error)throw results[3].error;if(results[4].error)throw results[4].error;if(results[5].error)throw results[5].error;if(results[6].error)throw results[6].error;if(results[7].error)throw results[7].error;if(results[8].error)throw results[8].error;
+  const supportMessagesForSound=results[1].data||[];
+  const customerMessageIds=supportMessagesForSound
+   .filter(m=>String(m.sender_role||m.sender||"").toLowerCase()==="customer"&&m.id)
+   .map(m=>String(m.id));
+  if(adminKnownSupportMessageIds===null)adminKnownSupportMessageIds=new Set(customerMessageIds);
+  else{
+   const newCustomerMessages=customerMessageIds.filter(id=>!adminKnownSupportMessageIds.has(id));
+   if(newCustomerMessages.length)playAdminNotificationSound();
+   customerMessageIds.forEach(id=>adminKnownSupportMessageIds.add(id));
+   if(adminKnownSupportMessageIds.size>1000)adminKnownSupportMessageIds=new Set(customerMessageIds);
+  }
   const notificationIds=(results[6].data||[]).map(n=>String(n.id));
   if(adminKnownNotificationIds===null)adminKnownNotificationIds=new Set(notificationIds);
   else{
