@@ -651,35 +651,32 @@ async function go(page,btn){
 async function dashboard(version){
  const tables=[["profiles","Customers","customers"],["products","Products","products"],["orders","Orders","orders"],["withdrawals","Withdrawals","withdrawals"],["kyc_submissions","KYC Requests","kyc_submissions"],["support_chat_messages","Messages","support_messages"]];
  let html="<div class='dashboard-page'><section class='admin-welcome'><div class='admin-welcome-kicker'>SMART SELLER OFFICIAL</div><h1>Welcome, Dear Smart Seller</h1><h1>Admin Jacki</h1></section><div class='cards'>";
+ // Fetch dashboard data together instead of waiting for each table one by one.
+ const results=await Promise.all([
+  loadCustomers(),
+  db.from("products").select("*",{count:"exact",head:true}),
+  db.from("orders").select("customer_id,status").limit(5000),
+  db.from("withdrawals").select("status").limit(2000),
+  db.from("kyc_submissions").select("status").limit(2000),
+  db.from("support_chat_messages").select("sender_role,sender,read_at").limit(2000),
+  db.from("premium_purchases").select("customer_id").in("status",["pending","approved"]).limit(5000)
+ ]);
+ if(!pageIs("dashboard",version))return;
+ const [customerLoad,productsResult,ordersResult,withdrawalsResult,kycResult,messagesResult,premium]=results;
+ const activeStatuses=["pending","pickup","picked","picked_up","picked up","processing","shipping"];
+ const counts={
+  profiles:{count:customers.length,error:false},
+  products:{count:productsResult.count??0,error:!!productsResult.error},
+  orders:{count:new Set((ordersResult.data||[]).filter(o=>activeStatuses.includes(String(o.status||"").trim().toLowerCase())).map(o=>String(o.customer_id||"")).filter(Boolean)).size,error:!!ordersResult.error},
+  withdrawals:{count:(withdrawalsResult.data||[]).filter(x=>String(x.status||"").trim().toLowerCase()==="pending").length,error:!!withdrawalsResult.error},
+  kyc_submissions:{count:(kycResult.data||[]).filter(x=>String(x.status||"").trim().toLowerCase()==="pending").length,error:!!kycResult.error},
+  support_chat_messages:{count:(messagesResult.data||[]).filter(m=>String(m.sender_role||m.sender||"").toLowerCase()==="customer"&&!m.read_at).length,error:!!messagesResult.error}
+ };
  for(const [table,name,page] of tables){
-  let displayCount=0,error=false;
-  if(table==="profiles"){
-   await loadCustomers();
-   displayCount=customers.length;
-  }else if(table==="orders"){
-   const r=await db.from("orders").select("customer_id,status").limit(5000);
-   if(r.error)error=true;
-   else displayCount=new Set((r.data||[]).filter(o=>["pending","pickup","picked","picked_up","picked up","processing","shipping"].includes(String(o.status||"").trim().toLowerCase())).map(o=>String(o.customer_id||"")).filter(Boolean)).size;
-  }else if(table==="support_chat_messages"){
-   const r=await db.from(table).select("sender_role,sender,read_at").limit(2000);
-   if(r.error)error=true;
-   else displayCount=(r.data||[]).filter(m=>String(m.sender_role||m.sender||"").toLowerCase()==="customer"&&!m.read_at).length;
-  }else if(table==="kyc_submissions"||table==="withdrawals"){
-   const r=await db.from(table).select("status").limit(2000);
-   if(r.error)error=true;
-   else displayCount=(r.data||[]).filter(x=>String(x.status||"").trim().toLowerCase()==="pending").length;
-  }else{
-   const r=await db.from(table).select("*",{count:"exact",head:true});
-   if(r.error)error=true;else displayCount=r.count??0;
-  }
-  if(!pageIs("dashboard",version))return;
+  const item=counts[table]||{count:0,error:true};
   const action=table==="orders"?"openDashboardOrders()":"go('"+page+"')";
-  html+='<div class="stat dashboard-stat" role="button" tabindex="0" onclick="'+action+'" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();'+action+'}">'+name+'<strong>'+(error?"Error":displayCount)+'</strong><span class="stat-hint">Click to open</span></div>';
+  html+='<div class="stat dashboard-stat" role="button" tabindex="0" onclick="'+action+'" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();'+action+'}">'+name+'<strong>'+(item.error?"Error":item.count)+'</strong><span class="stat-hint">Click to open</span></div>';
  }
- const premium=await db.from("premium_purchases").select("customer_id").in("status",["pending","approved"]).limit(5000);
- if(!pageIs("dashboard",version))return;
- await loadCustomers();
- if(!pageIs("dashboard",version))return;
  const activeCustomerIds=new Set(customers.map(c=>String(c.id)));
  const visiblePremiumRows=(premium.data||[]).filter(p=>activeCustomerIds.has(String(p.customer_id||"")));
  const premiumCount=premium.error?"Error":new Set(visiblePremiumRows.map(p=>String(p.customer_id||"")).filter(Boolean)).size;
@@ -1584,7 +1581,7 @@ async function supportPage(version=pageVersion){
   const savedCustomerId=activeSupportCustomerId;
   openSupportChat(savedCustomerId,true);
  }
- if(!supportRefreshTimer) supportRefreshTimer=setInterval(()=>{if(current==="support_messages")refreshSupportMessages();},5000);
+ if(!supportRefreshTimer) supportRefreshTimer=setInterval(()=>{if(current==="support_messages")refreshSupportMessages();},10000);
  refreshAdminBadges();
 }
 function makeSupportGroups(){
@@ -1625,17 +1622,17 @@ async function refreshSupportMessages(force=false){
  if(current!=="support_messages"||supportRefreshing)return;
  supportRefreshing=true;
  try{
-  await loadCustomers();
-  supportCustomers=customers.map(c=>({id:c.id,full_name:c.full_name,email:c.email}));
+  // Customer profiles are loaded when the page opens; do not fetch them on every chat poll.
   const r=await db.from("support_chat_messages").select("*").order("created_at",{ascending:true}).limit(1000);
   if(r.error)throw r.error;
   const next=r.data||[],signature=JSON.stringify(next);
   if(force||signature!==supportLastSignature){
    supportMessages=next;supportLastSignature=signature;makeSupportGroups();
    if(activeSupportCustomerId)openSupportChat(activeSupportCustomerId,true);else renderSupportCustomers();
+   refreshAdminBadges();
   }
  }catch(e){console.error("Customer Service refresh:",e.message);}
- finally{supportRefreshing=false;refreshAdminBadges();}
+ finally{supportRefreshing=false;}
 }
 function closeAdminSupportChat(){document.body.classList.remove("admin-chat-open");activeSupportCustomerId=null;try{sessionStorage.removeItem("smartSellerActiveSupportCustomer");}catch(e){}supportPage();}
 async function openSupportChat(customerId,preserveDraft=false){
